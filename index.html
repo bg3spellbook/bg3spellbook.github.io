@@ -4081,6 +4081,9 @@ function doFilter(){
     if(aRch.size&&![...aRch].some(function(v){return (sp.recharge||'')===v;}))return false;
 
     // Character filters (OR across characters within each mode)
+    // • Prepared : spell is prepared by that character
+    // • Known    : spell is known but NOT prepared
+    // • Can learn: spell is learnable but NOT known and NOT prepared
     if(hasFilters.length>0){
       var ok=false;
       hasFilters.forEach(function(c){if(sp[c]==='✅')ok=true;});
@@ -4088,13 +4091,22 @@ function doFilter(){
     }
     if(knownFilters.length>0){
       var ok2=false;
-      knownFilters.forEach(function(c){var kn=KNOWN[c]||{};if((kn.cantrips||[]).indexOf(sp.name)>=0||(kn.spells||[]).indexOf(sp.name)>=0)ok2=true;});
+      knownFilters.forEach(function(c){
+        if(sp[c]==='✅')return; // already prepared — skip
+        var kn=KNOWN[c]||{};
+        if((kn.cantrips||[]).indexOf(sp.name)>=0||(kn.spells||[]).indexOf(sp.name)>=0)ok2=true;
+      });
       if(!ok2)return false;
     }
     if(canFilters.length>0){
       var ok3=false;
-      // "Can learn" = accessible via class/race/feat/item for this character
-      canFilters.forEach(function(c){if(charCanHave(sp,c)||charCanHaveRace(sp,c)||!!(sp.features||sp.items))ok3=true;});
+      canFilters.forEach(function(c){
+        if(sp[c]==='✅')return; // already prepared — skip
+        var kn=KNOWN[c]||{};
+        var isKnown=(kn.cantrips||[]).indexOf(sp.name)>=0||(kn.spells||[]).indexOf(sp.name)>=0;
+        if(isKnown)return; // already known — skip
+        if(charCanHave(sp,c)||charCanHaveRace(sp,c)||!!(sp.features||sp.items))ok3=true;
+      });
       if(!ok3)return false;
     }
     return true;

@@ -29,8 +29,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 1. **FLAG LOOKUP SETS** – `CONC`, `RITUAL`, `VERBAL` etc. as `Set<string>` for O(1) flag lookup.
 2. **EMBEDDED SPELL DATA** – The `EMBEDDED_DATA` IIFE. Never modify this section by hand — use the Python pipeline.
 3. **PARTY BUILDER DATA** – `PARTY_CLASSES` map (class → subclasses), `PARTY_RACES` map (race → subraces), `S2C` (subclass→class), `S2R` (subrace→race).
-4. **STATE** – All mutable global state: `all` (spell array), `CHARS`, `CHAR_INFO`, `CHC` (char colours), `pinned`, `notes`, filter Sets (`aCls`, `aRac`, `aSrc`, etc.), sort state, dark mode flag.
-5. **HELPERS** – Small pure utilities: `hc` (hash→colour), `il` (is-light-colour), `esc`, `notify`, `spellMinLvl`, `charCanHave`, `charPrepLimit`, `bareTokens`, etc.
+4. **STATE** – All mutable global state: `all` (spell array), `CHARS`, `CHAR_INFO`, `CHC` (char colours), `KNOWN`, `pinned`, `notes`, filter Sets (`aCls`, `aRac`, `aSrc`, `activeMode`, etc.), sort state, dark mode flag.
+5. **HELPERS** – Small pure utilities: `hc` (hash→colour), `il` (is-light-colour), `esc`, `notify`, `spellMinLvl`, `charCanHave`, `charCanHaveClass`, `charCanHaveRace`, `charPrepLimit`, `getKnownLimits`, `getMaxSlotLevel`, `getLearnableSpells`, `getPreparableSpells`, etc.
 6. **ICON MAPS** – `classIcons`, `raceIcons`, `schoolIcons` (static CDN URLs). `wikiIconMap` / `wikiIconFb` (spell icons, MD5-path formula). `scrollIconMap`, `itemIconMap`, `featIconMap` (injected by `fetch_chip_icons.py`).
 7. **CHIP RENDERERS** – `classChips`, `raceChips`, `featChips`, `scrollChips`, `itemChips` — each takes a raw semicolon/comma-delimited string from a spell's field and returns HTML anchor chips with icons.
 8. **MULTI-SELECT WIDGETS** (`initMultiSelects`, `msOpen`, `msTick`, `buildMsWrapDynamic`) – Custom dropdown multi-select used for every filter. `buildFilterDropdowns` populates options from live data.
@@ -190,7 +190,7 @@ Each object in the embedded `spells` array:
 | Set | Field | Logic |
 |---|---|---|
 | `aLvl` | `level` | OR |
-| `aUsg` | derived (cantrip/ritual/concentration/prepared) | AND-within-group, OR-across |
+| `aUsg` | live prepared count (`sp[c]==='✅'` across CHARS): `used`=≥1, `multi`=≥2, `unused`=0 | OR |
 | `aAct` | `action_type` | OR |
 | `aSv` | `save` | OR |
 | `aFlg` | flags | OR |
@@ -205,7 +205,25 @@ Each object in the embedded `spells` array:
 | `aRch` | `recharge` | OR |
 | School pills | `school` | OR |
 
+**Character filter buttons** (`activeMode[c]`) cycle through three modes per click:
+- `'has'` — only spells prepared (`sp[c]==='✅'`) by this character
+- `'known'` — only spells in `KNOWN[c].cantrips` or `KNOWN[c].spells`
+- `'can'` — only spells accessible via class / race / feat / item
+
 Text search runs against `name`, `school`, `classes`, `features`, `items`, `scrolls`, and `description`.
+
+### Known Spells System
+
+`KNOWN = { charName: { cantrips: string[], spells: string[] } }` tracks which spells each character has explicitly learned (chosen at level-up or via scrolls). Persisted as `bg3known`.
+
+Key helpers:
+- `getKnownLimits(charName)` — returns `{ cantrips: N|null, spells: N|null }` from `KNOWN_PROGRESSION` tables. `null` = unlimited (Wizard spellbook / prepared-list classes).
+- `getMaxSlotLevel(charName)` — combined multiclass caster-level → max slot level (1–6).
+- `getLearnableSpells(charName, cantripOnly)` — full "can learn" pool with tiers: `'class'` (level-gated), `'race'` (no gate), `'feature'` (no gate), `'item'` (no gate).
+- `getPreparableSpells(charName)` — pool for the Prepare modal: prepared-class full list + explicitly known spells + race/feat/item spells. Never includes cantrips or variants.
+- `syncKnownCantrips(charName)` — auto-sets `sp[c]='✅'` for all known class/race cantrips.
+
+**Prepare modal** (`renderPrepSpells`) shows only the prepareable pool, never cantrips. Spell variant objects are synced to match their parent's prepared state but are excluded from all counts (`isVariant()` guard).
 
 ---
 

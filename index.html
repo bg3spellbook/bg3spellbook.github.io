@@ -421,8 +421,9 @@ input[type=text]#q { font-size: 13px; padding: 7px 12px; border-radius: var(--ra
   min-height: 28px; text-transform: uppercase;
 }
 .cbtn:hover { opacity: .6; transform: translateY(-1px); }
-.cbtn.mode-has { opacity: 1; border-style: solid; box-shadow: 0 3px 12px rgba(0,0,0,.4); transform: translateY(-1px); }
-.cbtn.mode-can { opacity: .75; border-style: dashed; }
+.cbtn.mode-has   { opacity: 1;   border-style: solid;  box-shadow: 0 3px 12px rgba(0,0,0,.4); transform: translateY(-1px); }
+.cbtn.mode-known { opacity: .9;  border-style: dotted; transform: translateY(-1px); }
+.cbtn.mode-can   { opacity: .75; border-style: dashed; }
 .cbtn:active { transform: scale(0.95) translateY(0); }
 
 .char-col-btns { display: flex; gap: 3px; align-items: center; flex-wrap: wrap; }
@@ -1396,13 +1397,21 @@ td.cmp-cb-cell input { accent-color:var(--gold); cursor:pointer; width:13px; hei
 .auth-ok { background: rgba(82,184,112,.12) !important; border-color: rgba(82,184,112,.4) !important; color: var(--green) !important; }
 .light .auth-ok { background: rgba(20,120,50,.1) !important; border-color: rgba(20,120,50,.4) !important; color: #186030 !important; }
 
-/* ── AUTH GATE — all action buttons disabled until signed in ── */
+/* ── AUTH GATE — action buttons disabled until signed in ── */
+/* Desktop: lock all header action buttons except the sign-in button */
 body.auth-locked .hdr-actions button:not(#authBtn),
 body.auth-locked .hdr-actions button:not(#authBtn) * { pointer-events: none !important; }
 body.auth-locked .hdr-actions button:not(#authBtn) { opacity: 0.3 !important; cursor: not-allowed !important; }
-body.auth-locked .bnav-btn { opacity: 0.3 !important; pointer-events: none !important; cursor: not-allowed !important; }
+/* Mobile: lock Party + Import nav buttons; keep Search, Filter, More accessible */
+body.auth-locked #bnavParty,
+body.auth-locked #bnavImport { opacity: 0.3 !important; pointer-events: none !important; cursor: not-allowed !important; }
+/* Lock all More-menu buttons except sign-in */
 body.auth-locked #moreMenu .btn:not(#authBtnM) { opacity: 0.3 !important; pointer-events: none !important; }
+/* Desktop sign-in button pulses to draw attention */
 body.auth-locked #authBtn { animation: authPulse 2.2s ease-in-out infinite; }
+/* Mobile: More button pulses + auth button inside More menu is highlighted */
+body.auth-locked #bnavMore { animation: authPulse 2.2s ease-in-out infinite; color: var(--gold) !important; }
+body.auth-locked #authBtnM { background: rgba(201,168,76,.15) !important; border-color: var(--gold) !important; color: var(--gold) !important; animation: authPulse 2.2s ease-in-out infinite; }
 @keyframes authPulse {
   0%,100% { box-shadow: 0 0 0 0 rgba(201,168,76,0); }
   50%      { box-shadow: 0 0 0 7px rgba(201,168,76,.28); }
@@ -1754,6 +1763,7 @@ body.auth-locked #authBtn { animation: authPulse 2.2s ease-in-out infinite; }
   <button class="bnav-btn" id="bnavMore" onclick="openMoreMenu()" title="More">
     <span class="bnav-ico">⋯</span>
     <span class="bnav-lbl">More</span>
+    <span class="bnav-dot" id="authDot"></span>
   </button>
 </nav>
 
@@ -2414,7 +2424,7 @@ var EMBEDDED_DATA = (function(){
 {"name":"Shield","url":"https://bg3.wiki/wiki/Shield_(spell)","school":"Abjuration","level":"Level 1","classes":"Warlock, Sorcerer (Lv 1), Wizard (Lv 1), The Hexblade (Lv 1), Arcane Trickster (Lv 3), Eldritch Knight (Lv 3)","features":"Magic Initiate: Sorcerer, Magic Initiate: Wizard","items":"Amulet of the Harpers, Shield of Shielding, Elegant Studded Leather","used":0,"cost":"Reaction","damage_types":[],"save":"","attack_roll":false,"concentration":false,"ritual":false,"conditions":[],"tags":["Defensive","Reaction"],"description":"Shield is a level 1 abjuration spell. It allows spellcasters to avoid being hit by an enemy attack at the last possible instant. It also nullifies Magic Missile damage against them.","range":"Self","wiki_icon":"https://bg3.wiki/wiki/Special:Filepath/Shield_Unfaded_Icon.png","recharge":"Long rest"},
 {"name":"Soul Ascension","url":"https://bg3.wiki/wiki/Soul_Ascension","school":"Evocation","level":"Level 6","features":"Legendary Action: Soul Ascension, Honour mode, Spells, Level 6 Spells, Evocation spells, Dexterity saving throws, Sources of Necrotic damage, Reactions, Legendary actions","used":0,"cost":"Action","damage_types":["Radiant"],"save":"WIS","attack_roll":false,"concentration":false,"ritual":false,"conditions":[],"tags":["Damage","Special"],"description":"Soul Ascension is a level 6 evocation spell. It is available to Raphael while he is in his Ascended Fiend form. It creates an area that, while inside, lets his cambions deal Hellfire damage, and causes Necrotic damage to enemies. It cannot be learned by party members.","range":"18 m (60 ft)","area":"3 m (10 ft) Radius","wiki_icon":"https://bg3.wiki/wiki/Special:Filepath/Soul_Ascension_Unfaded_Icon.png"},
 {"name":"Vampiric Swarm","url":"https://bg3.wiki/wiki/Vampiric_Swarm","school":"Conjuration","level":"Level 6","features":"Legendary Action: Vampiric Swarm","used":0,"cost":"Action","damage_types":["Necrotic"],"save":"","attack_roll":true,"concentration":true,"ritual":false,"conditions":[],"tags":["Damage","Necromancy"],"description":"Vampiric Swarm is a level 6 conjuration spell. It is cast as a legendary reaction available to Cazador in Honour mode. It cannot be learned by party members.","range":"10 m (33 ft)","area":"5 m (17 ft) Cube","wiki_icon":"https://bg3.wiki/wiki/Special:Filepath/Vampiric_Swarm_Unfaded_Icon.png"},
-{"name":"Absolute's Talisman: Aid","url":"https://bg3.wiki/wiki/Absolute's_Talisman:_Aid","school":"Abjuration","level":"Level 2","classes":"","races":"","features":"","items":"Absolute's Talisman","used":0,"parent":"Aid","cost":"Action","damage_types":[],"save":"","attack_roll":false,"concentration":false,"ritual":false,"conditions":[],"tags":["Buff","Healing"],"description":"Absolute&#039;s Talisman: Aid is a level 2 abjuration spell. This spell allows the Absolute&#039;s Talisman&#039;s wearer to heal themselves for 5⁠⁠Hit Points and increase their hit points for the same amount.","range":"Self","wiki_icon":"https://bg3.wiki/wiki/Special:Filepath/Absolute%27s_Talisman:_Aid_Unfaded_Icon.png","recharge":"Long rest"},
+{"name":"Absolute's Talisman: Aid","url":"https://bg3.wiki/wiki/Absolute's_Talisman:_Aid","school":"Abjuration","level":"Level 2","classes":"","races":"","features":"","items":"Absolute's Talisman","used":0,"cost":"Action","damage_types":[],"save":"","attack_roll":false,"concentration":false,"ritual":false,"conditions":[],"tags":["Buff","Healing"],"description":"Absolute&#039;s Talisman: Aid is a level 2 abjuration spell. This spell allows the Absolute&#039;s Talisman&#039;s wearer to heal themselves for 5⁠⁠Hit Points and increase their hit points for the same amount.","range":"Self","wiki_icon":"https://bg3.wiki/wiki/Special:Filepath/Absolute%27s_Talisman:_Aid_Unfaded_Icon.png","recharge":"Long rest"},
 {"name":"Animate Dead (Balthazar)","url":"https://bg3.wiki/wiki/Animate_Dead_(Balthazar)","school":"Necromancy","level":"Level 3","classes":"Paladin, Cleric (Lv 5), Wizard (Lv 5), Circle of the Spores (Circle Spell) (Lv 5), Warlock (Lv 5), Death Domain (Lv 5), College of Lore (Lv 6), Necromancer (Lv 6), Oathbreaker (Lv 9), Bard (Lv 10)","races":"","features":"","items":"","scrolls":"Scroll of Animate Dead","used":0,"parent":"Animate Dead","cost":"Action","damage_types":[],"save":"","attack_roll":false,"concentration":false,"ritual":false,"conditions":[],"tags":["Necromancy","Summoning"],"description":"Animate Dead is a level 6 necromancy spell. This a unique variant of Animate Dead that is cast by Balthazar when fought in Nightsong&#039;s Prison. When cast, this spell reanimates the many surrounding piles of bones into an army of skeletons. It cannot be learned by party members.","range":"22 m (73 ft)","wiki_icon":"https://bg3.wiki/wiki/Special:Filepath/Animate_Dead_(Balthazar)_Unfaded_Icon.png"},
 {"name":"Animate Dead (Duergar)","url":"https://bg3.wiki/wiki/Animate_Dead_(Duergar)","school":"Necromancy","level":"Level 3","classes":"Paladin, Cleric (Lv 5), Wizard (Lv 5), Circle of the Spores (Circle Spell) (Lv 5), Warlock (Lv 5), Death Domain (Lv 5), College of Lore (Lv 6), Necromancer (Lv 6), Oathbreaker (Lv 9), Bard (Lv 10)","races":"","features":"","items":"","scrolls":"Scroll of Animate Dead","used":0,"parent":"Animate Dead","cost":"Action","damage_types":[],"save":"","attack_roll":false,"concentration":false,"ritual":false,"conditions":[],"tags":["Necromancy","Summoning"],"description":"Animate Dead is a level 4 necromancy spell. Gekh Coal uses this spell to animate a pile of corpses at the Underdark Beach. It cannot be learned by party members.","range":"22 m (73 ft)","area":"8 m (27 ft) Radius","wiki_icon":"https://bg3.wiki/wiki/Special:Filepath/Animate_Dead_(Duergar)_Unfaded_Icon.png"},
 {"name":"Animate Dead: Flying Ghoul","url":"https://bg3.wiki/wiki/Animate_Dead:_Flying_Ghoul","school":"Necromancy","level":"Level 3","classes":"Paladin, Cleric (Lv 5), Wizard (Lv 5), Circle of the Spores (Circle Spell) (Lv 5), Warlock (Lv 5), Death Domain (Lv 5), College of Lore (Lv 6), Necromancer (Lv 6), Oathbreaker (Lv 9), Bard (Lv 10)","races":"","features":"","items":"","scrolls":"Scroll of Animate Dead","used":0,"parent":"Animate Dead","cost":"Action","damage_types":[],"save":"","attack_roll":false,"concentration":false,"ritual":false,"conditions":[],"tags":["Necromancy","Summoning"],"description":"Animate Dead: Flying Ghoul is a level 5 necromancy spell. This spell allows spellcasters to animate a corpse to create a Flying Ghoul. Requires a corpse, and lasts until long rest.","range":"3 m (10 ft)","wiki_icon":"https://bg3.wiki/wiki/Special:Filepath/Animate_Dead:_Flying_Ghoul_Unfaded_Icon.png"},
@@ -2907,6 +2917,10 @@ function _updateAuthUI(user){
     fresh.chars=[]; fresh.charInfo={};
     loadData(fresh);
   }
+  // Show/hide the auth dot on the mobile More button
+  var authDot = document.getElementById('authDot');
+  if(authDot) authDot.classList.toggle('show', !user);
+
   ['authBtn','authBtnM'].forEach(function(id){
     var btn=document.getElementById(id); if(!btn) return;
     if(user){
@@ -3779,7 +3793,7 @@ function loadData(result){
     var info=CHAR_INFO[c]||{};
     var clsList=info.classes||[{cls:info.cls||'',sub:info.sub||''}];
     var clsStr=clsList.filter(function(x){return x.cls;}).map(function(x){return x.cls+(x.sub?' > '+x.sub:'');}).join(', ');
-    var tip='Tap: Off → Prepared ✅ → Known ✓\n'+c+(clsStr?' | '+clsStr:'')+(info.race?' | '+info.race:'');
+    var tip='Tap: Off → Prepared ✅ → Known ◦ → Can learn ·\n'+c+(clsStr?' | '+clsStr:'')+(info.race?' | '+info.race:'');
     return '<button class="cbtn" style="background:'+CHC[c]+';color:#1a1a1a;border-color:'+CHC[c]+'" data-c="'+c+'" data-i="'+i+'" onclick="toggleChar(this)" title="'+tip+'">'+c+'</button>';
   }).join('');
   document.getElementById('charBtns').innerHTML=btnHtml;
@@ -3827,20 +3841,25 @@ function mirrorFilterDropdowns(){
 //   4. Calls render() + renderCards() to update the DOM
 //   5. Updates the stats bar (spell count, used badge, overlap badge, etc.)
 //
-// charCanHave(sp, charName) — returns true if sp is learnable by the given char
-//   based on their class/subclass/race/subrace stored in CHAR_INFO.
+// Character filter buttons cycle through three modes per character (activeMode[c]):
+//   'off'   — character ignored in filter (default; button dimmed)
+//   'has'   — show only spells prepared (✅) by this character
+//   'known' — show only spells in KNOWN[c].cantrips or KNOWN[c].spells
+//   'can'   — show only spells accessible to this character via class/race/feat/item
 //
+// toggleChar(btn)           — cycles activeMode for one character and re-filters
 // updateFilterDot()         — shows/hides the "filters active" indicator dot
-//
 // toggleSchool is defined in the mobile section above (handles both pill sets)
 
+// Cycles activeMode for one character button: off → prepared → known → can learn → off.
 function toggleChar(b){
   var c=b.dataset.c;
   var cur=activeMode[c]||'off';
-  b.classList.remove('mode-has','mode-can');
-  if(cur==='off'){activeMode[c]='has';b.classList.add('mode-has');b.style.opacity='1';}
-  else if(cur==='has'){activeMode[c]='can';b.classList.add('mode-can');b.style.opacity='0.85';}
-  else{activeMode[c]='off';b.style.opacity='0.4';}
+  b.classList.remove('mode-has','mode-known','mode-can');
+  if(cur==='off')        {activeMode[c]='has';  b.classList.add('mode-has');  b.style.opacity='1';}
+  else if(cur==='has')   {activeMode[c]='known';b.classList.add('mode-known');b.style.opacity='0.9';}
+  else if(cur==='known') {activeMode[c]='can';  b.classList.add('mode-can');  b.style.opacity='0.75';}
+  else                   {activeMode[c]='off';  b.style.opacity='0.4';}
   doFilter();
 }
 
@@ -3860,7 +3879,7 @@ function clearAll(){
   msClear('rngWrap',aRng);msClear('aoeWrap',aAoe);msClear('rchWrap',aRch);
   aSchools.clear();
   CHARS.forEach(function(c){activeMode[c]='off';});
-  document.querySelectorAll('.cbtn').forEach(function(b){b.style.opacity='0.4';b.classList.remove('mode-has','mode-can');});
+  document.querySelectorAll('.cbtn').forEach(function(b){b.style.opacity='0.4';b.classList.remove('mode-has','mode-known','mode-can');});
   document.querySelectorAll('.spill').forEach(function(s){s.classList.remove('on');});
   expKey=null;updateFilterDot();doFilter();
 }
@@ -3954,8 +3973,9 @@ function toggleVariants(){
 function doFilter(){
   var qEl=document.getElementById('q');var qmEl=document.getElementById('qm');
   var q=((qEl&&qEl.value)||(qmEl&&qmEl.value)||'').toLowerCase();
-  var hasFilters=CHARS.filter(function(c){return activeMode[c]==='has';});
-  var canFilters=CHARS.filter(function(c){return activeMode[c]==='can';});
+  var hasFilters  =CHARS.filter(function(c){return activeMode[c]==='has';});
+  var knownFilters=CHARS.filter(function(c){return activeMode[c]==='known';});
+  var canFilters  =CHARS.filter(function(c){return activeMode[c]==='can';});
   // Variants are never part of the sorted/filtered main list — they always render under their parent
   var baseSpells = all.filter(function(sp){ return !isVariant(sp); });
   var f=baseSpells.filter(function(sp){
@@ -3966,12 +3986,13 @@ function doFilter(){
     // Level (multi)
     if(aLvl.size&&!aLvl.has(sp.level))return false;
 
-    // Usage (multi, OR logic)
+    // Usage (multi, OR logic) — based on how many party members have the spell prepared
     if(aUsg.size){
+      var prepCount=CHARS.filter(function(c){return sp[c]==='✅';}).length;
       var uMatch=false;
-      if(aUsg.has('used')&&sp.used>=1)uMatch=true;
-      if(aUsg.has('multi')&&sp.used>=2)uMatch=true;
-      if(aUsg.has('unused')&&sp.used===0)uMatch=true;
+      if(aUsg.has('used')  && prepCount>=1)uMatch=true;
+      if(aUsg.has('multi') && prepCount>=2)uMatch=true;
+      if(aUsg.has('unused')&& prepCount===0)uMatch=true;
       if(!uMatch)return false;
     }
 
@@ -4059,15 +4080,31 @@ function doFilter(){
     if(aAoe.size&&![...aAoe].some(function(v){return (sp.area||'')===v;}))return false;
     if(aRch.size&&![...aRch].some(function(v){return (sp.recharge||'')===v;}))return false;
 
-    if(hasFilters.length>0){var ok=false;hasFilters.forEach(function(c){if(sp[c]==='✅')ok=true;});if(!ok)return false;}
-    if(canFilters.length>0){var ok2=false;canFilters.forEach(function(c){if(charCanHave(sp,c))ok2=true;});if(!ok2)return false;}
+    // Character filters (OR across characters within each mode)
+    if(hasFilters.length>0){
+      var ok=false;
+      hasFilters.forEach(function(c){if(sp[c]==='✅')ok=true;});
+      if(!ok)return false;
+    }
+    if(knownFilters.length>0){
+      var ok2=false;
+      knownFilters.forEach(function(c){var kn=KNOWN[c]||{};if((kn.cantrips||[]).indexOf(sp.name)>=0||(kn.spells||[]).indexOf(sp.name)>=0)ok2=true;});
+      if(!ok2)return false;
+    }
+    if(canFilters.length>0){
+      var ok3=false;
+      // "Can learn" = accessible via class/race/feat/item for this character
+      canFilters.forEach(function(c){if(charCanHave(sp,c)||charCanHaveRace(sp,c)||!!(sp.features||sp.items))ok3=true;});
+      if(!ok3)return false;
+    }
     return true;
   });
   fC=f.filter(function(s){return s.level==='Cantrip';});
   fS=f.filter(function(s){return s.level!=='Cantrip';});
   expKey=null;
   fC.sort(cmp); fS.sort(cmp); render(); renderCards();
-  var used=f.filter(function(s){return s.used>0;}).length;
+  // "used" badge = spells prepared by at least one party member
+  var used=f.filter(function(s){return CHARS.some(function(c){return s[c]==='✅';});}).length;
   var ovlp=f.filter(function(s){return CHARS.filter(function(c){return s[c]==='✅';}).length>=2;}).length;
   var pnd=f.filter(function(s){return pinned.has(s.name);}).length;
   var shownBase=baseSpells.length;
@@ -4079,8 +4116,9 @@ function doFilter(){
   if(used)html+=' <span class="sbadge" style="background:rgba(212,136,64,.2);color:var(--orange);border-color:rgba(212,136,64,.3)">'+used+' used</span>';
   if(ovlp)html+=' <span class="sbadge" style="background:rgba(212,82,74,.15);color:#e07870;border-color:rgba(212,82,74,.3)">'+ovlp+' overlap</span>';
   if(pnd)html+=' <span class="sbadge" style="background:rgba(201,168,76,.15);color:var(--gold);border-color:rgba(201,168,76,.3)">★ '+pnd+' pinned</span>';
-  if(hasFilters.length)html+=' <span class="sbadge" style="background:rgba(90,184,120,.15);color:var(--green);border-color:rgba(90,184,120,.3)">Prepared: '+hasFilters.join(', ')+'</span>';
-  if(canFilters.length)html+=' <span class="sbadge" style="background:rgba(201,168,76,.15);color:var(--gold);border-color:rgba(201,168,76,.3)">Known: '+canFilters.join(', ')+'</span>';
+  if(hasFilters.length)  html+=' <span class="sbadge" style="background:rgba(90,184,120,.15);color:var(--green);border-color:rgba(90,184,120,.3)">Prepared: '+hasFilters.join(', ')+'</span>';
+  if(knownFilters.length)html+=' <span class="sbadge" style="background:rgba(120,160,220,.15);color:#8ab4f8;border-color:rgba(120,160,220,.3)">Known: '+knownFilters.join(', ')+'</span>';
+  if(canFilters.length)  html+=' <span class="sbadge" style="background:rgba(201,168,76,.15);color:var(--gold);border-color:rgba(201,168,76,.3)">Can learn: '+canFilters.join(', ')+'</span>';
   document.getElementById('stats').innerHTML=html;
   if(gapOpen)buildGap();
   updateFilterDot();
@@ -4158,15 +4196,23 @@ function spellRow(sp,i,isVar){
   bgs+='<span class="sf sf-note" id="ni_'+nid+'" style="display:'+(hasNote?'inline':'none')+'" data-tip="Has notes">📝</span>';
   var pinLbl=isPinned?'★':'☆';
   var ccs='';
+  // Per-character columns — three visual states:
+  //   ✓  (bright, solid border)  — spell is prepared (sp[c]==='✅')
+  //   ◦  (medium dot)            — spell is in the character's known list
+  //   ·  (faint dot)             — spell is accessible but not yet known/prepared
   CHARS.forEach(function(c,ci){
-    var has=sp[c]==='✅';
-    var canHave=!has&&charCanHave(sp,c);
-    var cc=collChars.has(ci)?'ch-col':'';
-    var bg=has?CHC[c]+'28':canHave?'rgba(201,168,76,0.05)':'transparent';
-    var content=has
-      ?'<span style="font-size:13px;font-weight:900;color:'+CHC[c]+';text-shadow:0 0 8px '+CHC[c]+'88" title="'+c+' — prepared">✓</span>'
-      :canHave?'<span style="font-size:14px;color:'+CHC[c]+'90;line-height:1" title="'+c+' — known">◦</span>':'';
-    ccs+='<td class="cc tdc'+ci+' '+cc+'" style="background:'+bg+';border-left:2px solid '+(has?CHC[c]+'66':'transparent')+'">'+content+'</td>';
+    var hasPrepared = sp[c]==='✅';
+    var kn = KNOWN[c]||{};
+    var isKnown  = !hasPrepared && ((kn.cantrips||[]).indexOf(sp.name)>=0 || (kn.spells||[]).indexOf(sp.name)>=0);
+    var canHave  = !hasPrepared && !isKnown && charCanHave(sp,c);
+    var cc  = collChars.has(ci) ? 'ch-col' : '';
+    var bg  = hasPrepared ? CHC[c]+'28' : isKnown ? CHC[c]+'15' : canHave ? 'rgba(201,168,76,0.04)' : 'transparent';
+    var bdr = hasPrepared ? CHC[c]+'66' : isKnown  ? CHC[c]+'44' : 'transparent';
+    var content = hasPrepared
+      ? '<span style="font-size:13px;font-weight:900;color:'+CHC[c]+';text-shadow:0 0 8px '+CHC[c]+'88" title="'+c+' — prepared">✓</span>'
+      : isKnown  ? '<span style="font-size:14px;color:'+CHC[c]+'bb;line-height:1" title="'+c+' — known">◦</span>'
+      : canHave  ? '<span style="font-size:12px;color:'+CHC[c]+'55;line-height:1" title="'+c+' — can learn">·</span>' : '';
+    ccs+='<td class="cc tdc'+ci+' '+cc+'" style="background:'+bg+';border-left:2px solid '+bdr+'">'+content+'</td>';
   });
   var inCmp=compareSet.has(sp.name);
   var h='<tr class="dr'+(isPinned?' pinned':'')+(isVar?'':i%2===0?'':' alt')+(isVar?' sp-variant':'')+'" onclick="openSpellModal(allSpellsMap[\x27'+esc(sp.name)+'\x27])">';
@@ -4179,7 +4225,8 @@ function spellRow(sp,i,isVar){
   h+='</div><div class="slvl">'+sp.level+'</div><div class="spell-flags">'+bgs+'</div></td>';
   var schoolIcoHtml=schoolIcons[sp.school]?chipIco(schoolIcons[sp.school]):'';
   h+='<td><a href="https://bg3.wiki/wiki/'+sp.school+'_spells" target="_blank" onclick="event.stopPropagation()" class="school-chip" style="background:'+sbg+'22;color:'+sbg+';border-color:'+sbg+'55;text-decoration:none">'+schoolIcoHtml+(sp.school||'—')+'</a></td>';
-  h+='<td style="text-align:center"><span class="ubadge '+uCls(sp.used)+'">'+sp.used+'</span></td>';
+  var livePrepCnt=CHARS.filter(function(c){return sp[c]==='✅';}).length;
+  h+='<td style="text-align:center"><span class="ubadge '+uCls(livePrepCnt)+'">'+livePrepCnt+'</span></td>';
   h+='<td class="ic" data-col="0"><div class="chips">'+scrollChips(sp.scrolls)+'</div></td>';
   h+='<td class="ic" data-col="1"><div class="chips">'+classChips(sp.classes||'')+'</div></td>';
   h+='<td class="ic" data-col="2"><div class="chips">'+raceChips(sp.races||'')+'</div></td>';
@@ -4287,10 +4334,13 @@ function selectPrepChar(c){
   renderPrepCharTabs();
   renderPrepSpells();
 }
+// Rebuilds the character tab strip at the top of the Prepare modal.
+// Each tab shows the character's name and a "prepared / limit" badge.
+// Count excludes cantrips (always free) and variant spells (synced from parent).
 function renderPrepCharTabs(){
   var html=CHARS.map(function(c){
     var active=c===_prepChar;
-    var prepCnt=all.filter(function(s){return s[c]==='✅'&&s.level!=='Cantrip';}).length;
+    var prepCnt=all.filter(function(s){return s[c]==='✅'&&s.level!=='Cantrip'&&!isVariant(s);}).length;
     var limit=charPrepLimit(c);
     var over=limit!==null&&prepCnt>limit;
     var cc=over?'#e07870':(CHC[c]||'#888');
@@ -4304,14 +4354,69 @@ function renderPrepCharTabs(){
   }).join('');
   document.getElementById('prepCharTabs').innerHTML=html;
 }
+// Builds the pool of leveled spells a character can prepare.
+// Rules:
+//   • Cantrips are NEVER included (they are auto-prepared when learned).
+//   • Variant spells are excluded.
+//   • Prepared-list classes (Cleric/Druid/Paladin/Wizard): all class spells
+//     up to the character's current max spell-slot level.
+//   • Known-spell classes (Bard/Sorc/Warlock/Ranger/EK/AT): only the spells
+//     explicitly chosen in the party popup (KNOWN[charName].spells).
+//   • Race/feature/item spells: always included for any character (no known gate).
+function getPreparableSpells(charName) {
+  var seen = new Set();
+  var result = [];
+  function add(sp) {
+    if (!sp || sp.level === 'Cantrip' || isVariant(sp) || seen.has(sp.name)) return;
+    seen.add(sp.name);
+    result.push(sp);
+  }
+
+  var info = CHAR_INFO[charName];
+  if (!info) return result;
+  var classes = info.classes && info.classes.length
+    ? info.classes
+    : [{ cls: info.cls||'', sub: info.sub||'', lvl: info.lvl||1 }];
+  var maxSlot = getMaxSlotLevel(charName);
+
+  // Prepared-list classes: include every class spell up to the slot-level cap.
+  var hasPrepClass = classes.some(function(e) {
+    return !!PREP_LIMIT_FN[S2C[e.sub||''] || e.cls || ''];
+  });
+  if (hasPrepClass) {
+    all.forEach(function(sp) {
+      if (sp.level === 'Cantrip' || isVariant(sp)) return;
+      if ((LO[sp.level] || 0) > maxSlot) return;
+      if (charCanHaveClass(sp, charName)) add(sp);
+    });
+  }
+
+  // Known-spell classes: only spells the user explicitly selected.
+  var knownNames = (KNOWN[charName] && KNOWN[charName].spells) || [];
+  knownNames.forEach(function(name) {
+    var sp = allSpellsMap[name];
+    if (sp) add(sp);
+  });
+
+  // Race / feature / item spells: always prepareable, no known-gate needed.
+  getLearnableSpells(charName, false).forEach(function(e) {
+    if (e.tier !== 'class') add(e.spell);
+  });
+
+  return result;
+}
+
+// Renders the spell list for the currently selected character (_prepChar).
+// Uses getPreparableSpells() to build the correct pool (prepared-class full list,
+// known-class selection, plus race/feat/item spells). Cantrips are never shown.
 function renderPrepSpells(){
   if(!_prepChar)return;
   var q=(document.getElementById('prepSearch').value||'').toLowerCase().trim();
-  var known=all.filter(function(s){return charCanHave(s,_prepChar)&&!isVariant(s);});
-  if(q)known=known.filter(function(s){return s.name.toLowerCase().indexOf(q)>=0||(s.school||'').toLowerCase().indexOf(q)>=0;});
-  var LEVEL_ORDER=['Cantrip','Level 1','Level 2','Level 3','Level 4','Level 5','Level 6','Level 7','Level 8','Level 9'];
-  // Limit bar (leveled spells only; cantrips are free)
-  var prepCnt=all.filter(function(s){return s[_prepChar]==='✅'&&s.level!=='Cantrip';}).length;
+  var pool=getPreparableSpells(_prepChar);
+  if(q)pool=pool.filter(function(s){return s.name.toLowerCase().indexOf(q)>=0||(s.school||'').toLowerCase().indexOf(q)>=0;});
+  var LEVEL_ORDER=['Level 1','Level 2','Level 3','Level 4','Level 5','Level 6','Level 7','Level 8','Level 9'];
+  // Count only non-variant leveled spells for the limit bar
+  var prepCnt=all.filter(function(s){return s[_prepChar]==='✅'&&s.level!=='Cantrip'&&!isVariant(s);}).length;
   var limit=charPrepLimit(_prepChar);
   var html='';
   if(limit!==null){
@@ -4333,7 +4438,7 @@ function renderPrepSpells(){
       +'</div>';
   }
   LEVEL_ORDER.forEach(function(lvl){
-    var group=known.filter(function(s){return s.level===lvl;});
+    var group=pool.filter(function(s){return s.level===lvl;});
     if(!group.length)return;
     var prepInGroup=group.filter(function(s){return s[_prepChar]==='✅';}).length;
     html+='<div style="margin-bottom:14px">';
@@ -4350,7 +4455,7 @@ function renderPrepSpells(){
     });
     html+='</div>';
   });
-  if(!html)html='<div style="color:var(--text3);font-size:13px;padding:30px 0;text-align:center">'+(q?'No spells matching "'+q+'"':'No available spells for '+_prepChar)+'</div>';
+  if(!html)html='<div style="color:var(--text3);font-size:13px;padding:30px 0;text-align:center">'+(q?'No spells matching "'+q+'"':'No spells to prepare for '+_prepChar+' — select known spells in the Party popup (👥) first')+'</div>';
   document.getElementById('prepSpellList').innerHTML=html;
 }
 function setPrepared(spellName,checked,el){
@@ -4361,14 +4466,16 @@ function setPrepared(spellName,checked,el){
   if(checked&&sp.level!=='Cantrip'){
     var limit=charPrepLimit(_prepChar);
     if(limit!==null){
-      var cur=all.filter(function(s){return s[_prepChar]==='✅'&&s.level!=='Cantrip';}).length;
+      var cur=all.filter(function(s){return s[_prepChar]==='✅'&&s.level!=='Cantrip'&&!isVariant(s);}).length;
       if(cur>=limit){
         notify('⚠ '+_prepChar+' is over the base prep limit ('+limit+') — allowed via feats/items');
       }
     }
   }
   sp[_prepChar]=checked?'✅':'';
-  // Auto-sync all variants of this spell for this character
+  // Mirror the prepared state onto every variant (Tactician, Dryad, etc.) so
+  // their table rows also light up. Variants are excluded from all count logic
+  // (isVariant() guard) to avoid inflating the prepared count.
   var variants=variantsByParent[spellName];
   if(variants)variants.forEach(function(v){v[_prepChar]=checked?'✅':'';});
   savePrepared();
@@ -4848,6 +4955,20 @@ function buildKnownSectionHTML(items, known, limitN, type) {
   var raceItems    = items.filter(function(e){ return e.tier === 'race';    });
   var featItems    = items.filter(function(e){ return e.tier === 'feature'; });
   var itemItems    = items.filter(function(e){ return e.tier === 'item';    });
+
+  // Sort a group so checked (known) items float to the top, preserving the
+  // existing level → name order within each checked / unchecked partition.
+  function knownFirst(arr) {
+    return arr.slice().sort(function(a, b) {
+      var ac = known.indexOf(a.spell.name) >= 0 ? 0 : 1;
+      var bc = known.indexOf(b.spell.name) >= 0 ? 0 : 1;
+      return ac - bc;
+    });
+  }
+  classItems = knownFirst(classItems);
+  raceItems  = knownFirst(raceItems);
+  featItems  = knownFirst(featItems);
+  itemItems  = knownFirst(itemItems);
 
   var classChk = classItems.filter(function(e){ return known.indexOf(e.spell.name) >= 0; }).length;
   var hasLimit = limitN !== null && limitN !== undefined;

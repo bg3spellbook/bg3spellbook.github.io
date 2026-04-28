@@ -3205,14 +3205,17 @@ function charPrepLimit(c){
 //   KNOWN              — { charName: { cantrips: string[], spells: string[] } }
 //                        Runtime state. Persisted to bg3known / Firestore.
 //
-//   getMaxSlotLevel(c)       — combined multiclass max slot level (1–6)
-//   getKnownLimits(c)        — { cantrips: N, spells: N|null }
-//   charCanHaveClassRace(sp,c) — charCanHave but skips feat/item grants
-//   charIsWizard(c)          — true if any class entry is Wizard
-//   getLearnableSpells(c)    — [{ spell, tier:'class'|'bonus' }] filtered pool
-//   syncKnownCantrips(c)     — auto-prepares known class-cantrips for char c
-//   saveKnown()              — persists KNOWN to bg3known + Firestore
-//   loadKnown()              — restores KNOWN from bg3known for current CHARS
+//   getMaxSlotLevel(c)         — combined multiclass max slot level (1–6)
+//   getKnownLimits(c)          — { cantrips: N, spells: N|null }
+//   charCanHaveClass(sp,c)     — true if spell is on the character's class list (level-gated)
+//   charCanHaveRace(sp,c)      — true if spell is granted by the character's race (no level gate)
+//   charCanHaveClassRace(sp,c) — charCanHaveClass || charCanHaveRace
+//   charIsWizard(c)            — true if any class entry is Wizard
+//   getLearnableSpells(c)      — [{ spell, tier:'class'|'race'|'feature'|'item' }] filtered pool
+//   getPreparableSpells(c)     — non-cantrip, non-variant spells from KNOWN[c].spells
+//   syncKnownCantrips(c)       — auto-prepares every cantrip in KNOWN[c].cantrips
+//   saveKnown()                — persists KNOWN to bg3known + Firestore
+//   loadKnown()                — restores KNOWN from bg3known for current CHARS
 
 // ── Progression tables ────────────────────────────────────────────────
 
@@ -3847,11 +3850,11 @@ function mirrorFilterDropdowns(){
 //   4. Calls render() + renderCards() to update the DOM
 //   5. Updates the stats bar (spell count, used badge, overlap badge, etc.)
 //
-// Character filter buttons cycle through three modes per character (activeMode[c]):
+// Character filter buttons cycle through four modes per character (activeMode[c]):
 //   'off'   — character ignored in filter (default; button dimmed)
-//   'has'   — show only spells prepared (✅) by this character
-//   'known' — show only spells in KNOWN[c].cantrips or KNOWN[c].spells
-//   'can'   — show only spells accessible to this character via class/race/feat/item
+//   'has'   — prepared (✅) spells only
+//   'known' — known (in KNOWN[c]) but NOT prepared
+//   'can'   — accessible via class/race/feat/item but NOT known and NOT prepared
 //
 // toggleChar(btn)           — cycles activeMode for one character and re-filters
 // updateFilterDot()         — shows/hides the "filters active" indicator dot
@@ -4354,7 +4357,7 @@ function selectPrepChar(c){
 }
 // Rebuilds the character tab strip at the top of the Prepare modal.
 // Each tab shows the character's name and a "prepared / limit" badge.
-// Count excludes cantrips (always free) and variant spells (synced from parent).
+// Count is derived from getPreparableSpells() so it always matches the visible list.
 function renderPrepCharTabs(){
   var html=CHARS.map(function(c){
     var active=c===_prepChar;
@@ -4405,7 +4408,7 @@ function renderPrepSpells(){
   var pool=getPreparableSpells(_prepChar);
   if(q)pool=pool.filter(function(s){return s.name.toLowerCase().indexOf(q)>=0||(s.school||'').toLowerCase().indexOf(q)>=0;});
   var LEVEL_ORDER=['Level 1','Level 2','Level 3','Level 4','Level 5','Level 6','Level 7','Level 8','Level 9'];
-  // Count only non-variant leveled spells for the limit bar
+  // Count prepared spells from the prepareable pool (already excludes cantrips and variants)
   var prepCnt=getPreparableSpells(_prepChar).filter(function(s){return s[_prepChar]==='✅';}).length;
   var limit=charPrepLimit(_prepChar);
   var html='';
@@ -4474,6 +4477,11 @@ function setPrepared(spellName,checked,el){
   doFilter();
 }
 
+// Builds the "Party" section shown inside the spell detail popup.
+// Shows every character that has any relationship to the spell, labelled as:
+//   "prepared"  — sp[c] === '✅'
+//   "known"     — in KNOWN[c].cantrips or KNOWN[c].spells but not prepared
+//   "can learn" — accessible via class/race/feat/item but not known or prepared
 function buildModalPartySection(sp){
   var partyChars=CHARS.filter(function(c){
     if(sp[c]==='✅')return true;
@@ -5141,8 +5149,11 @@ function buildMemberCard(name, baseRace, subrace, clsList, spellMod) {
 function removePartyMember(i){ var el=document.getElementById('pm_'+i); if(el) el.remove(); }
 function removePmCard(i)     { var el=document.getElementById('pm_'+i); if(el) el.remove(); }
 
-// Reads the party modal grid, updates CHARS / CHAR_INFO / KNOWN, syncs
-// known cantrips to the prepared state, persists everything, and re-renders.
+// Reads the party modal grid, updates CHARS / CHAR_INFO / KNOWN, then:
+//   • Un-prepares any non-cantrip spell no longer in the character's prepareable pool
+//     (i.e. removed from the Known list or class changed).
+//   • Auto-prepares every cantrip in the Known list (known cantrips are always prepared).
+// Persists everything to localStorage + Firestore and re-renders.
 function saveParty() {
   var members = [];
   document.querySelectorAll('.pm-card').forEach(function(el) {
@@ -5231,10 +5242,9 @@ function saveParty() {
   allSpellsMap = {};
   all.forEach(function(sp){ allSpellsMap[sp.name] = sp; });
 
-  // Un-prepare any spell no longer in the character's prepareable pool.
-  // This covers two cases:
-  //   1. Spell removed from the Known list → no longer in getPreparableSpells()
-  //   2. Spell no longer accessible at all (class/race changed)
+  // Un-prepare any leveled spell no longer in the prepareable pool.
+  // Covers both "removed from Known list" and "class/race changed" cases.
+  // Cantrips are handled separately by syncKnownCantrips below.
   CHARS.forEach(function(c) {
     var pool = new Set(getPreparableSpells(c).map(function(s){ return s.name; }));
     all.forEach(function(sp) {
@@ -5242,7 +5252,7 @@ function saveParty() {
     });
   });
 
-  // Auto-prepare every known cantrip — known cantrips are always prepared in BG3.
+  // Auto-prepare every cantrip in the Known list — known cantrips are always prepared.
   CHARS.forEach(function(c){ syncKnownCantrips(c); });
 
   savePrepared();

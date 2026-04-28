@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**BG3 Spellbook** is a single-file static web application (`bg3-spellbook.html`, ~700 KB) that serves as a reference and planning tool for Baldur's Gate 3 spells. All application code — HTML, CSS (~384 rules), and JavaScript (~135 functions) — lives in that one file. The Python scripts are **offline maintenance tools** only; they are never deployed.
+**BG3 Spellbook** is a single-file static web application (`index.html`, ~700 KB) that serves as a reference and planning tool for Baldur's Gate 3 spells. All application code — HTML, CSS (~384 rules), and JavaScript (~135 functions) — lives in that one file. The Python scripts are **offline maintenance tools** only; they are never deployed.
 
 ---
 
@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### The HTML File
 
-`bg3-spellbook.html` is divided into three major zones:
+`index.html` is divided into three major zones:
 
 | Zone | Approx line | Content |
 |---|---|---|
@@ -119,7 +119,7 @@ python tools/compute_icons.py
 ## Project Structure
 
 ```
-bg3-spellbook.html      ← deployable app (single static file)
+index.html      ← deployable app (single static file)
 CLAUDE.md               ← this file
 data/
   current_spells.json   ← master spell list (source of truth)
@@ -210,8 +210,8 @@ Text search runs against `name`, `school`, `classes`, `features`, `items`, `scro
 
 ## Deployment
 
-The app is a **single static file** (`bg3-spellbook.html`) with no build step and no server-side dependencies. All external resources are:
+The app is a **single static file** (`index.html`) with no build step and no server-side dependencies. All external resources are:
 - Google Fonts (Cinzel, Crimson Pro) via CDN
 - bg3.wiki CDN for icon images (loaded on demand, hidden on error)
 
-To deploy: serve `bg3-spellbook.html` from any static host (Netlify, GitHub Pages, Vercel, S3+CloudFront, etc.). No environment variables, no backend.
+To deploy: serve `index.html` from any static host (Netlify, GitHub Pages, Vercel, S3+CloudFront, etc.). No environment variables, no backend.

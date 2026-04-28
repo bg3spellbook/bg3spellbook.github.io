@@ -18,7 +18,7 @@ from pathlib import Path
 
 # ── paths ─────────────────────────────────────────────────────────────────
 ROOT   = Path(__file__).resolve().parent.parent   # project root
-INFILE = str(ROOT / 'bg3-spellbook.html')
+INFILE = str(ROOT / 'index.html')
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers

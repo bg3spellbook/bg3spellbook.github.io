@@ -7,7 +7,7 @@ Formula:
   md5_hex  = md5(filename)        ← exact case, no lowercasing
   url      = https://bg3.wiki/w/images/<md5[0]>/<md5[:2]>/<filename>
 
-Injects  var wikiIconMap={...};  into bg3-spellbook.html, then updates
+Injects  var wikiIconMap={...};  into index.html, then updates
 siUrl() and siFallback() to use the map.
 
 Run once (pure Python, no network):
@@ -19,7 +19,7 @@ from pathlib import Path
 
 # ── paths ─────────────────────────────────────────────────────────────────
 ROOT         = Path(__file__).resolve().parent.parent   # project root
-HTML_FILE    = str(ROOT / 'bg3-spellbook.html')
+HTML_FILE    = str(ROOT / 'index.html')
 SPELLS_FILE  = str(ROOT / 'data' / 'current_spells.json')
 BASE         = 'https://bg3.wiki/w/images'
 
@@ -128,4 +128,4 @@ else:
     print('WARNING: siFallback() not found — not updated')
 
 open(HTML_FILE, 'w', encoding='utf-8').write(html)
-print(f'\nDone — reload bg3-spellbook.html in your browser.')
+print(f'\nDone — reload index.html in your browser.')

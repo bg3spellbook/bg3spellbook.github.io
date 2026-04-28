@@ -1,6 +1,6 @@
 """
 clear_party.py  —  Strips party-member columns and resets 'used' counts from
-the embedded spell array in bg3-spellbook.html, so the app ships with a clean slate.
+the embedded spell array in index.html, so the app ships with a clean slate.
 
 Standard spell fields (everything else is a character column):
   name url school level classes races features items scrolls
@@ -12,7 +12,7 @@ import json, re
 from pathlib import Path
 
 ROOT      = Path(__file__).resolve().parent.parent
-HTML_FILE = str(ROOT / 'bg3-spellbook.html')
+HTML_FILE = str(ROOT / 'index.html')
 
 STANDARD_FIELDS = {
     'name','url','school','level','classes','races','features','items','scrolls',
@@ -56,4 +56,4 @@ new_block = prefix + '\n' + new_body + '\n' + suffix
 html = html[:m.start()] + new_block + html[m.end():]
 
 open(HTML_FILE, 'w', encoding='utf-8').write(html)
-print(f'Done — bg3-spellbook.html updated ({len(spells)} spells, no party data)')
+print(f'Done — index.html updated ({len(spells)} spells, no party data)')

@@ -11,7 +11,7 @@ from pathlib import Path
 
 # ── paths ─────────────────────────────────────────────────────────────────
 ROOT        = Path(__file__).resolve().parent.parent   # project root
-HTML_FILE   = str(ROOT / 'bg3-spellbook.html')
+HTML_FILE   = str(ROOT / 'index.html')
 SPELLS_FILE = str(ROOT / 'data' / 'current_spells.json')
 DATA_FILE   = str(ROOT / 'data' / 'wiki_data.json')
 

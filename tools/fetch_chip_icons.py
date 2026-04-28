@@ -1,6 +1,6 @@
 """
 fetch_chip_icons.py  —  Fetches icon URLs for scrolls, items, and features
-from bg3.wiki, then injects them into bg3-spellbook.html as JS maps.
+from bg3.wiki, then injects them into index.html as JS maps.
 
 Run:
     python fetch_chip_icons.py
@@ -16,7 +16,7 @@ from pathlib import Path
 # ── paths ─────────────────────────────────────────────────────────────────
 ROOT        = Path(__file__).resolve().parent.parent   # project root
 DATA        = ROOT / 'data'
-HTML_FILE   = str(ROOT / 'bg3-spellbook.html')
+HTML_FILE   = str(ROOT / 'index.html')
 NAMES_FILE  = str(DATA / 'chip_names.json')
 CACHE_FILE  = str(DATA / 'chip_icons.json')
 RATE        = 0.4
@@ -152,4 +152,4 @@ else:
     print('Inserted icon maps before CHIP RENDERERS')
 
 open(HTML_FILE, 'w', encoding='utf-8').write(html)
-print('Done — reload bg3-spellbook.html')
+print('Done — reload index.html')

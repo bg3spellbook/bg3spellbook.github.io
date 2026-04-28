@@ -13,7 +13,7 @@ from pathlib import Path
 
 # ── paths ─────────────────────────────────────────────────────────────────
 ROOT   = Path(__file__).resolve().parent.parent   # project root
-INFILE = str(ROOT / 'bg3-spellbook.html')
+INFILE = str(ROOT / 'index.html')
 
 def extract_balanced(text, marker, open_ch):
     close_ch = '}' if open_ch == '{' else ']'

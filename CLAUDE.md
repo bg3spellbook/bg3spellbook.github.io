@@ -49,6 +49,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `bg3charInfo` | `CHAR_INFO` object (character spell-mod / prep-limit overrides) |
 | `bg3chars` | `CHARS` array (party member names) |
 | `bg3prepared` | `{spellName: {charName: "✅"}}` map |
+| `bg3known` | `{charName: {cantrips: string[], spells: string[]}}` — explicitly chosen known spells |
 | `bg3removed` | JSON array of spell names the user has hidden |
 
 Spell data is **always taken from the embedded `EMBEDDED_DATA`**. The app explicitly wipes `bg3spells` on load to prevent stale overrides.

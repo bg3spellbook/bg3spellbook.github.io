@@ -1416,7 +1416,7 @@ body.auth-locked #authBtn { animation: authPulse 2.2s ease-in-out infinite; }
   try {
     var keys = [];
     for(var i=0; i<localStorage.length; i++) keys.push(localStorage.key(i));
-    keys.forEach(function(k){ if(k && k.indexOf('bg3')===0 && k!=='bg3p' && k!=='bg3n' && k!=='bg3dark' && k!=='bg3charInfo' && k!=='bg3chars' && k!=='bg3prepared' && k!=='bg3removed') localStorage.removeItem(k); });
+    keys.forEach(function(k){ if(k && k.indexOf('bg3')===0 && k!=='bg3p' && k!=='bg3n' && k!=='bg3dark' && k!=='bg3charInfo' && k!=='bg3chars' && k!=='bg3prepared' && k!=='bg3removed' && k!=='bg3known') localStorage.removeItem(k); });
     localStorage.removeItem('bg3spells');
   } catch(e){}
 })();
@@ -1893,7 +1893,7 @@ body.auth-locked #authBtn { animation: authPulse 2.2s ease-in-out infinite; }
     </div>
     <div id="prepCharTabs" style="display:flex;gap:6px;padding:10px 16px;flex-wrap:wrap;border-bottom:1px solid var(--border);flex-shrink:0"></div>
     <div style="padding:8px 16px;border-bottom:1px solid var(--border);flex-shrink:0">
-      <input type="text" id="prepSearch" placeholder="Search known spells…" oninput="renderPrepSpells()" style="width:100%">
+      <input type="text" id="prepSearch" placeholder="Search spells to prepare…" oninput="renderPrepSpells()" style="width:100%">
     </div>
     <div id="prepSpellList" style="flex:1;min-height:0;overflow-y:auto;padding:10px 16px"></div>
   </div>
@@ -2897,7 +2897,10 @@ function _updateAuthUI(user){
       localStorage.removeItem('bg3chars');
       localStorage.removeItem('bg3charInfo');
       localStorage.removeItem('bg3prepared');
+      localStorage.removeItem('bg3known');
     }catch(e){}
+    // Reset known-spells runtime state
+    KNOWN = {};
     // Reset runtime party state and re-render with empty party
     CHARS=[]; CHAR_INFO={}; CHC={};
     var fresh=EMBEDDED_DATA;
@@ -2931,6 +2934,7 @@ function _loadFromFirestore(uid){
       if(d.chars)   { localStorage.setItem('bg3chars',   JSON.stringify(d.chars));   }
       if(d.charInfo){ localStorage.setItem('bg3charInfo',JSON.stringify(d.charInfo));}
       if(d.prepared){ localStorage.setItem('bg3prepared',JSON.stringify(d.prepared));}
+      if(d.known)   { localStorage.setItem('bg3known',   JSON.stringify(d.known));   }
       if(d.pinned)  { pinned=new Set(d.pinned); localStorage.setItem('bg3p',JSON.stringify(d.pinned)); }
       if(d.notes)   { notes=d.notes;            localStorage.setItem('bg3n',JSON.stringify(d.notes));  }
       if(d.removed) { localStorage.setItem('bg3removed',JSON.stringify(d.removed));  }
@@ -2940,6 +2944,9 @@ function _loadFromFirestore(uid){
     if(d.chars)    data.chars    = d.chars;
     if(d.charInfo) data.charInfo = d.charInfo;
     loadData(data);
+    // Re-apply known-cantrip auto-prepare after cloud load
+    CHARS.forEach(function(c){ syncKnownCantrips(c); });
+    savePrepared();
     notify('☁ Party loaded from cloud');
   }).catch(function(e){ console.warn('Firestore load failed:',e); });
 }
@@ -2961,6 +2968,7 @@ function _saveToFirestore(){
     chars:    CHARS,
     charInfo: CHAR_INFO,
     prepared: prep,
+    known:    KNOWN,
     pinned:   [...pinned],
     notes:    notes,
     removed:  getRemoved()
@@ -2979,6 +2987,7 @@ function exportDataJSON(){
     chars:    CHARS,
     charInfo: CHAR_INFO,
     prepared: prep,
+    known:    KNOWN,
     pinned:   [...pinned],
     notes:    notes,
     removed:  getRemoved()
@@ -3156,6 +3165,284 @@ function charPrepLimit(c){
   if(!hasPrepClass)return null;
   var mod=parseInt(info.spellMod)||0;
   return Math.max(1,total+mod);
+}
+
+// ═══════════════════════════════════
+// KNOWN SPELLS — progression tables & helpers
+// ═══════════════════════════════════
+// Tracks which spells/cantrips each party member has actually chosen to learn
+// (at level-up for spontaneous casters) or scribed (Wizard). Separate from
+// "prepared", which is the daily subset ready to cast.
+//
+//   KNOWN_PROGRESSION  — { class: { c:[cantrips×12], s:[spells×12]|null } }
+//                        c = cantrips known per level (index 0 = level 1)
+//                        s = spells known per level, or null for prepared
+//                            casters (Cleric/Druid/Paladin/Wizard) who access
+//                            their entire class list without a "known" cap.
+//
+//   MAX_SLOT_LEVEL     — { class: [maxSlotLevel×12] }
+//                        Highest spell-slot level the class can cast at each
+//                        of the 12 BG3 levels. Used to gate the learnable pool.
+//
+//   CASTER_TYPE        — { class: 'full'|'half'|'third' }
+//                        Contribution weight when combining multiclass levels
+//                        into a single effective caster level for slot calculation.
+//
+//   KNOWN              — { charName: { cantrips: string[], spells: string[] } }
+//                        Runtime state. Persisted to bg3known / Firestore.
+//
+//   getMaxSlotLevel(c)       — combined multiclass max slot level (1–6)
+//   getKnownLimits(c)        — { cantrips: N, spells: N|null }
+//   charCanHaveClassRace(sp,c) — charCanHave but skips feat/item grants
+//   charIsWizard(c)          — true if any class entry is Wizard
+//   getLearnableSpells(c)    — [{ spell, tier:'class'|'bonus' }] filtered pool
+//   syncKnownCantrips(c)     — auto-prepares known class-cantrips for char c
+//   saveKnown()              — persists KNOWN to bg3known + Firestore
+//   loadKnown()              — restores KNOWN from bg3known for current CHARS
+
+// ── Progression tables ────────────────────────────────────────────────
+
+// How many cantrips (c) and spells (s) each class can KNOW at each BG3 level.
+// Indexes 0–11 correspond to class levels 1–12.
+// s:null means the class prepares from its full list (no fixed "known" cap).
+var KNOWN_PROGRESSION = {
+  'Bard':             { c:[2,2,2,3,3,3,3,3,3,4,4,4], s:[4,5,6,7,8,9,10,11,12,13,14,15] },
+  'Cleric':           { c:[3,3,3,4,4,4,4,4,4,5,5,5], s:null },
+  'Druid':            { c:[2,2,2,3,3,3,3,3,3,4,4,4], s:null },
+  'Paladin':          { c:[0,0,0,0,0,0,0,0,0,0,0,0], s:null },
+  'Ranger':           { c:[0,0,0,0,0,0,0,0,0,0,0,0], s:[2,3,3,4,4,5,5,6,6,7,7,8] },
+  'Sorcerer':         { c:[4,4,4,5,5,5,5,5,5,6,6,6], s:[2,3,4,5,6,7,8,9,10,11,12,13] },
+  'Warlock':          { c:[2,2,2,3,3,3,3,3,3,4,4,4], s:[2,3,4,5,6,7,8,9,10,10,11,12] },
+  'Wizard':           { c:[3,3,3,4,4,4,4,4,4,5,5,5], s:null }, // spellbook = unlimited (scroll scribing)
+  // Subclass spellcasters — indexed by Fighter/Rogue level (levels 1–2 = 0 spells)
+  'Eldritch Knight':  { c:[0,0,2,2,2,2,2,2,2,2,2,2], s:[0,0,3,4,4,4,5,6,6,6,7,8] },
+  'Arcane Trickster': { c:[0,0,2,2,2,2,2,2,2,2,2,2], s:[0,0,3,4,4,4,5,6,6,6,7,8] }
+};
+
+// Highest spell-slot level available per class per BG3 level (index 0 = level 1).
+// Used to gate which spells appear in the "can learn" combobox.
+var MAX_SLOT_LEVEL = {
+  'Bard':             [1,1,2,2,3,3,4,4,5,5,6,6],
+  'Cleric':           [1,1,2,2,3,3,4,4,5,5,6,6],
+  'Druid':            [1,1,2,2,3,3,4,4,5,5,6,6],
+  'Sorcerer':         [1,1,2,2,3,3,4,4,5,5,6,6],
+  'Warlock':          [1,1,2,2,3,3,4,4,5,5,5,5],
+  'Wizard':           [1,1,2,2,3,3,4,4,5,5,6,6],
+  'Paladin':          [1,1,1,1,2,2,2,2,3,3,3,3],
+  'Ranger':           [1,1,1,1,2,2,2,2,3,3,3,3],
+  // Third-casters: no slots at levels 1–2, 1st-level slots at 3–6, 2nd at 7+
+  'Eldritch Knight':  [0,0,1,1,1,1,2,2,2,2,2,2],
+  'Arcane Trickster': [0,0,1,1,1,1,2,2,2,2,2,2]
+};
+
+// Contribution factor when combining multiclass caster levels for slot calculation.
+// Full=1, Half=0.5, Third=0.333. Non-casters are absent from this map (factor 0).
+var CASTER_TYPE = {
+  'Bard':'full','Cleric':'full','Druid':'full','Sorcerer':'full','Warlock':'full','Wizard':'full',
+  'Paladin':'half','Ranger':'half',
+  'Eldritch Knight':'third','Arcane Trickster':'third'
+};
+
+// ── Runtime state ────────────────────────────────────────────────────
+// Keyed by character name; each value has cantrips[] and spells[].
+var KNOWN = {};
+
+// ── Helpers ──────────────────────────────────────────────────────────
+
+// Returns the highest spell-slot level this character can currently access,
+// accounting for multiclass by combining weighted caster levels:
+//   full casters contribute their full level,
+//   half casters contribute floor(level/2),
+//   third casters contribute floor(level/3).
+// The sum is then mapped to a slot level using the standard 5e table.
+function getMaxSlotLevel(charName) {
+  var info = CHAR_INFO[charName];
+  if (!info) return 0;
+  var classes = info.classes && info.classes.length
+    ? info.classes
+    : [{ cls: info.cls||'', sub: info.sub||'', lvl: info.lvl||1 }];
+
+  var combined = 0;
+  classes.forEach(function(entry) {
+    var lvl = Math.min(Math.max(parseInt(entry.lvl)||1, 1), 12);
+    // Prefer subclass key (EK, AT) if it has its own slot table
+    var key = (entry.sub && MAX_SLOT_LEVEL[entry.sub]) ? entry.sub : entry.cls;
+    if (!CASTER_TYPE[key]) return; // non-caster class — contributes nothing
+    var type = CASTER_TYPE[key];
+    if (type === 'full')  combined += lvl;
+    if (type === 'half')  combined += Math.floor(lvl / 2);
+    if (type === 'third') combined += Math.floor(lvl / 3);
+  });
+
+  // Standard 5e combined-caster-level → max slot level mapping (capped at 6 for BG3)
+  if (combined >= 11) return 6;
+  if (combined >= 9)  return 5;
+  if (combined >= 7)  return 4;
+  if (combined >= 5)  return 3;
+  if (combined >= 3)  return 2;
+  if (combined >= 1)  return 1;
+  return 0;
+}
+
+// Returns { cantrips: N, spells: N|null } — how many cantrips/spells this
+// character can know. Cantrip and spell counts are summed independently across
+// all class entries (each class contributes its own pool separately).
+// spells:null means no hard cap (prepared classes, Wizard spellbook).
+function getKnownLimits(charName) {
+  var info = CHAR_INFO[charName];
+  if (!info) return { cantrips: 0, spells: null };
+  var classes = info.classes && info.classes.length
+    ? info.classes
+    : [{ cls: info.cls||'', sub: info.sub||'', lvl: info.lvl||1 }];
+
+  var totalC = 0, totalS = 0, hasSpellLimit = false;
+  classes.forEach(function(entry) {
+    var lvl = Math.min(Math.max(parseInt(entry.lvl)||1, 1), 12);
+    // Prefer subclass progression if available (EK, AT), else resolve parent class
+    var key = (entry.sub && KNOWN_PROGRESSION[entry.sub])
+      ? entry.sub
+      : (S2C[entry.sub||''] || entry.cls);
+    var prog = KNOWN_PROGRESSION[key];
+    if (!prog) return; // non-spellcasting class
+    totalC += prog.c[lvl - 1] || 0;
+    if (prog.s !== null) {
+      totalS += prog.s[lvl - 1] || 0;
+      hasSpellLimit = true;
+    }
+    // s:null (Cleric/Druid/Paladin/Wizard) → no fixed "known" cap
+  });
+
+  return { cantrips: totalC, spells: hasSpellLimit ? totalS : null };
+}
+
+// Like charCanHave() but only matches class and race sources.
+// Feat/item grants (sp.features / sp.items) are deliberately excluded so
+// we can distinguish the "chosen at level-up" pool from bonus spells.
+function charCanHaveClassRace(sp, charName) {
+  var info = CHAR_INFO[charName];
+  if (!info) return false;
+  var race = info.race || '';
+  var classes = info.classes && info.classes.length
+    ? info.classes
+    : [{ cls: info.cls||'', sub: info.sub||'', lvl: info.lvl||1 }];
+
+  // Build bare-token sets (strip level annotations like "(Lv 3)")
+  function bareT(s) {
+    if (!s) return new Set();
+    var out = new Set();
+    s.split(',').forEach(function(p) {
+      p = p.trim().replace(/\s*\([^)]+\)/g, '').trim();
+      if (p) out.add(p);
+    });
+    return out;
+  }
+  var spCls  = bareT(sp.classes);
+  var spRace = bareT(sp.races);
+
+  // Class check — same logic as charCanHave minus the feat branch
+  for (var i = 0; i < classes.length; i++) {
+    var cls = classes[i].cls || '', sub = classes[i].sub || '', lv = classes[i].lvl || 1;
+    if (!cls) continue;
+    if (spCls.has(cls) && lv >= spellMinLvl(sp.classes, cls)) return true;
+    if (sub && spCls.has(sub) && lv >= spellMinLvl(sp.classes, sub)) return true;
+  }
+
+  // Race check — identical to charCanHave
+  if (race) {
+    if (spRace.has(race)) {
+      var subs4r = [];
+      spRace.forEach(function(t) { if (S2R[t] === race) subs4r.push(t); });
+      if (!subs4r.length) return true;
+    }
+    var parent = S2R[race];
+    if (parent && spRace.has(parent)) {
+      var subs4p = [];
+      spRace.forEach(function(t) { if (S2R[t] === parent) subs4p.push(t); });
+      if (!subs4p.length) return true;
+      if (subs4p.indexOf(race) > -1) return true;
+    }
+  }
+  return false;
+}
+
+// Returns true if any of the character's class entries is Wizard.
+// Used to enable the scroll-scribing rule in getLearnableSpells().
+function charIsWizard(charName) {
+  var info = CHAR_INFO[charName];
+  if (!info) return false;
+  var classes = info.classes && info.classes.length
+    ? info.classes
+    : [{ cls: info.cls||'', sub: info.sub||'', lvl: info.lvl||1 }];
+  return classes.some(function(e) { return e.cls === 'Wizard'; });
+}
+
+// Builds the full "can learn" pool for the party-card comboboxes.
+// Returns [{ spell, tier }] where tier is:
+//   'class'  — from class/race list or Wizard scroll scribing (counts toward limit)
+//   'bonus'  — from a feat/item grant (does NOT count toward the class known limit)
+// Spells are filtered to: cantrips always pass; leveled spells must be
+// ≤ getMaxSlotLevel(charName). Variant spells are excluded.
+// cantripOnly: true → cantrips only, false → leveled only, undefined → both
+function getLearnableSpells(charName, cantripOnly) {
+  var info = CHAR_INFO[charName];
+  if (!info) return [];
+  var maxSlot = getMaxSlotLevel(charName);
+  var isWiz   = charIsWizard(charName);
+  var result  = [];
+
+  all.forEach(function(sp) {
+    if (isVariant(sp)) return;
+    var isCantrip = sp.level === 'Cantrip';
+    if (cantripOnly === true  && !isCantrip) return;
+    if (cantripOnly === false &&  isCantrip) return;
+
+    // Level gate for non-cantrips
+    if (!isCantrip && (LO[sp.level] || 0) > maxSlot) return;
+
+    var fromClassRace = charCanHaveClassRace(sp, charName);
+    // Wizard scroll scribing: any leveled spell that has a scroll
+    var fromScroll    = isWiz && !isCantrip && !!sp.scrolls;
+    // Feat/item bonus spells: charCanHave returns true but class/race check fails
+    var fromFeatItem  = !fromClassRace && !fromScroll && charCanHave(sp, charName);
+
+    if (fromClassRace || fromScroll) result.push({ spell: sp, tier: 'class' });
+    else if (fromFeatItem)           result.push({ spell: sp, tier: 'bonus' });
+  });
+  return result;
+}
+
+// Auto-prepares (✅) every class/race cantrip that is in the character's
+// KNOWN list, and un-prepares class/race cantrips that are no longer known.
+// Feat/item cantrips are intentionally left untouched (manually managed).
+// Does nothing if the character has no known cantrips configured yet —
+// this preserves any manual preparation state from before the feature was used.
+function syncKnownCantrips(charName) {
+  var kc = (KNOWN[charName] && KNOWN[charName].cantrips) || [];
+  if (!kc.length) return; // nothing configured → don't touch manual state
+  all.forEach(function(sp) {
+    if (sp.level !== 'Cantrip') return;
+    if (!charCanHaveClassRace(sp, charName)) return; // leave feat/item cantrips alone
+    sp[charName] = kc.indexOf(sp.name) >= 0 ? '✅' : '';
+  });
+}
+
+// ── Persistence ──────────────────────────────────────────────────────
+
+// Writes KNOWN to localStorage and schedules a Firestore sync.
+function saveKnown() {
+  try { localStorage.setItem('bg3known', JSON.stringify(KNOWN)); } catch(e) {}
+  _scheduleFirestoreSave();
+}
+
+// Reads bg3known from localStorage and populates KNOWN for all current CHARS.
+// Called once during loadData() after CHARS is populated.
+function loadKnown() {
+  try {
+    var raw = JSON.parse(localStorage.getItem('bg3known') || '{}');
+    Object.keys(raw).forEach(function(c) {
+      if (CHARS.indexOf(c) >= 0) KNOWN[c] = raw[c];
+    });
+  } catch(e) {}
 }
 
 // ═══════════════════════════════════
@@ -3415,8 +3702,8 @@ function buildMsWrapDynamic(wrapId,setName,items){
 //   loadData(result)        — called once on page load; merges EMBEDDED_DATA with any
 //                             localStorage overrides (used counts, prepared flags, notes,
 //                             pinned spells). Also builds lookup maps.
-//   loadFromStorage()       — reads bg3chars / bg3charInfo / bg3prepared / bg3removed
-//                             and applies them to the spell array.
+//   loadFromStorage()       — reads bg3chars / bg3charInfo / bg3prepared / bg3known /
+//                             bg3removed and applies them to the spell array.
 //   buildAllMaps()          — builds allSpellsMap { name→spell } and
 //                             variantsByParent { parentName→[variants] }
 //                             after data is loaded or reloaded.
@@ -3438,6 +3725,8 @@ function loadData(result){
 
   // Restore prepared states from localStorage
   loadPrepared();
+  // Restore known-spells selections from localStorage
+  loadKnown();
 
   // Build parent → [variant spells] map for auto-preparation sync
   variantsByParent={};
@@ -4032,7 +4321,7 @@ function renderPrepSpells(){
     });
     html+='</div>';
   });
-  if(!html)html='<div style="color:var(--text3);font-size:13px;padding:30px 0;text-align:center">'+(q?'No known spells matching "'+q+'"':'No known spells for '+_prepChar)+'</div>';
+  if(!html)html='<div style="color:var(--text3);font-size:13px;padding:30px 0;text-align:center">'+(q?'No spells matching "'+q+'"':'No available spells for '+_prepChar)+'</div>';
   document.getElementById('prepSpellList').innerHTML=html;
 }
 function setPrepared(spellName,checked,el){
@@ -4402,6 +4691,7 @@ function doImport(){
         if(data.chars)    localStorage.setItem('bg3chars',    JSON.stringify(data.chars));
         if(data.charInfo) localStorage.setItem('bg3charInfo', JSON.stringify(data.charInfo));
         if(data.prepared) localStorage.setItem('bg3prepared', JSON.stringify(data.prepared));
+        if(data.known)    localStorage.setItem('bg3known',    JSON.stringify(data.known));
         if(data.pinned)   { pinned=new Set(data.pinned); localStorage.setItem('bg3p', JSON.stringify(data.pinned)); }
         if(data.notes)    { notes=data.notes; localStorage.setItem('bg3n', JSON.stringify(data.notes)); }
         if(data.removed)  localStorage.setItem('bg3removed',  JSON.stringify(data.removed));
@@ -4418,6 +4708,7 @@ function doImport(){
     // Restore any overlay fields included in a legacy full export
     try{
       if(data.prepared) localStorage.setItem('bg3prepared', JSON.stringify(data.prepared));
+      if(data.known)    localStorage.setItem('bg3known',    JSON.stringify(data.known));
       if(data.pinned)   { pinned=new Set(data.pinned); localStorage.setItem('bg3p', JSON.stringify(data.pinned)); }
       if(data.notes)    { notes=data.notes; localStorage.setItem('bg3n', JSON.stringify(data.notes)); }
       if(data.removed)  localStorage.setItem('bg3removed',  JSON.stringify(data.removed));
@@ -4507,91 +4798,291 @@ function addPartyMember(){
   wrap.innerHTML=buildMemberCard('','','','');
   grid.appendChild(wrap.firstElementChild);
 }
-function buildMemberCard(name,baseRace,subrace,clsList,spellMod){
-  if(!clsList||!clsList.length)clsList=[{cls:'',sub:''}];
-  var mod=parseInt(spellMod)||0;
-  var modStr=mod>=0?'+'+mod:''+mod;
-  return '<div class="pm-card" style="background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:8px 10px;margin-bottom:6px">'
-    +'<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">'
-    +'<input type="text" placeholder="Character name" class="pm-name" style="flex:1;font-weight:600;font-size:12px" value="'+name+'">'
-    +'<button class="btn btn-danger" style="padding:4px 8px;flex-shrink:0" onclick="this.closest(\'.pm-card\').remove()">✕</button>'
-    +'</div>'
-    +'<div style="display:flex;gap:4px;margin-bottom:6px;align-items:center">'
-    +'<span style="font-size:9px;color:var(--text);letter-spacing:1px;text-transform:uppercase;font-family:Cinzel,serif;white-space:nowrap;width:36px">Race</span>'
-    +buildRaceSelect(baseRace,subrace)
-    +'</div>'
-    +'<div style="font-size:9px;color:var(--text);letter-spacing:1px;text-transform:uppercase;font-family:Cinzel,serif;margin-bottom:3px">Classes</div>'
-    +'<div class="pm-cls-rows">'+pmClsHTML(clsList)+'</div>'
-    +'<div style="display:flex;gap:6px;align-items:center;margin-top:7px">'
-    +'<button class="btn" onclick="addPmCls(this)" style="font-size:10px;padding:2px 8px">+ Add class</button>'
-    +'<div style="margin-left:auto;display:flex;align-items:center;gap:5px">'
-    +'<span style="font-size:9px;color:var(--text);letter-spacing:1px;text-transform:uppercase;font-family:Cinzel,serif;white-space:nowrap" title="Spellcasting ability modifier added to prepared spell limit (WIS for Cleric/Druid, INT for Wizard, CHA for Paladin)">Spell Mod</span>'
-    +'<input type="number" class="pm-spell-mod" value="'+mod+'" min="-5" max="10" style="width:54px;font-size:12px;padding:3px 6px;text-align:center" title="Spellcasting ability modifier (WIS for Cleric/Druid, INT for Wizard, CHA for Paladin)">'
-    +'</div>'
-    +'</div>'
-    +'</div>';
+// ── Known-section HTML builder ────────────────────────────────────────
+// Builds one collapsible "Known Spells" panel (cantrips or leveled spells)
+// for a party-member card.
+//
+//   items  — [{ spell, tier:'class'|'bonus' }] sorted learnable-spell list
+//   known  — string[] of currently known spell names for this character
+//   limitN — number (hard cap, e.g. Sorc/Bard) or null (Wizard / prepared classes)
+//   type   — 'c' → cantrip checkboxes (.pm-kc-chk)
+//            's' → spell  checkboxes (.pm-ks-chk)
+//
+// Only class-tier items count toward limitN; bonus (feat/item) items are shown
+// in a separate sub-group and never reduce the remaining budget.
+function buildKnownSectionHTML(items, known, limitN, type) {
+  var classItems = items.filter(function(e){ return e.tier === 'class'; });
+  var bonusItems = items.filter(function(e){ return e.tier === 'bonus'; });
+  var classChk   = classItems.filter(function(e){ return known.indexOf(e.spell.name) >= 0; }).length;
+  var hasLimit   = limitN !== null && limitN !== undefined;
+  var badge      = hasLimit ? classChk + '/' + limitN : '' + classChk;
+  var over       = hasLimit && classChk > limitN;
+  var badgeClr   = over ? '#e07870' : 'var(--gold)';
+  var label      = type === 'c' ? 'Cantrips' : 'Spells Known';
+
+  // Builds one checkbox label row for a spell entry
+  function itemRow(e) {
+    var sp    = e.spell;
+    var chk   = known.indexOf(sp.name) >= 0;
+    var lvlPfx = sp.level !== 'Cantrip'
+      ? '<span style="font-size:9px;color:var(--text3);margin-right:2px">' + sp.level.replace('Level ','L') + '</span>'
+      : '';
+    // Escape single-quotes in spell names for the value attribute
+    var safeVal = sp.name.replace(/'/g, '&#39;');
+    return '<label style="display:flex;gap:5px;padding:2px 0;cursor:pointer;align-items:baseline">'
+      + '<input type="checkbox" class="pm-k' + type + '-chk" value="' + safeVal + '" data-tier="' + e.tier + '"'
+      + (chk ? ' checked' : '')
+      + ' onchange="pmKnownUpdateBadge(this)"'
+      + ' style="flex-shrink:0;accent-color:var(--gold);cursor:pointer;margin-top:2px">'
+      + '<span style="font-size:11px;line-height:1.4">' + lvlPfx + sp.name + '</span>'
+      + '</label>';
+  }
+
+  var classHTML = classItems.map(itemRow).join('');
+  var bonusHTML = bonusItems.length
+    ? '<div style="border-top:1px solid var(--border);margin-top:4px;padding-top:3px">'
+        + '<span style="font-size:8px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3)">'
+        + 'Bonus (feats &amp; items)</span>'
+        + bonusItems.map(itemRow).join('')
+      + '</div>'
+    : '';
+
+  // Inline search: filters labels by text content without a named function call
+  var srchScript = "var q=this.value.toLowerCase();"
+    + "this.nextElementSibling.querySelectorAll('label')"
+    + ".forEach(function(l){l.style.display=l.textContent.toLowerCase().indexOf(q)>-1?'flex':'none';})";
+
+  return '<div class="pm-known-sec" data-type="' + type + '">'
+    // Header — click anywhere on the row to expand/collapse
+    + '<div onclick="pmKnownToggle(this)"'
+    +   ' style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;'
+    +          'padding:4px 0;user-select:none;border-top:1px solid var(--border);margin-top:6px">'
+    +   '<span style="font-size:9px;font-family:Cinzel,serif;text-transform:uppercase;'
+    +          'letter-spacing:1px;color:var(--text2)">' + label + '</span>'
+    +   '<span class="pm-kn-badge" data-lim="' + (hasLimit ? limitN : '') + '"'
+    +         ' style="font-size:9px;padding:1px 7px;border-radius:10px;'
+    +                'background:var(--bg2);color:' + badgeClr + '">' + badge + '</span>'
+    + '</div>'
+    // Body — collapsed by default, revealed on header click
+    + '<div style="display:none;margin-bottom:4px">'
+    +   '<input type="text" placeholder="Search…" oninput="' + srchScript + '"'
+    +          ' style="width:100%;font-size:10px;padding:2px 5px;margin-bottom:3px;box-sizing:border-box">'
+    +   '<div style="max-height:130px;overflow-y:auto;padding-right:2px">'
+    +     classHTML + bonusHTML
+    +   '</div>'
+    + '</div>'
+    + '</div>';
 }
-function removePartyMember(i){var el=document.getElementById('pm_'+i);if(el)el.remove();}
-function removePmCard(i){var el=document.getElementById('pm_'+i);if(el)el.remove();}
-function saveParty(){
-  var members=[];
-  document.querySelectorAll('.pm-card').forEach(function(el){
-    var name=el.querySelector('.pm-name').value.trim();
-    // Race: read base race select + subrace select; use subrace if set, else base race
-    var baseRaceSel=el.querySelector('.pm-race-sel');
-    var subraceSel=el.querySelector('.pm-subrace-sel');
-    var baseRace=baseRaceSel?baseRaceSel.value:'';
-    var subrace=subraceSel?subraceSel.value:'';
-    var race=subrace||baseRace;
-    var classes=[];
-    el.querySelectorAll('.pm-cls-row').forEach(function(row){
-      var clsSel=row.querySelector('.pm-cls-sel');
-      var subSel=row.querySelector('.pm-sub-sel');
-      var lvlSel=row.querySelector('.pm-lvl-sel');
-      var cls=clsSel?clsSel.value.trim():'';
-      var sub=subSel?subSel.value.trim():'';
-      var lvl=parseInt(lvlSel?lvlSel.value:'1')||1;
-      if(cls)classes.push({cls:cls,sub:sub,lvl:lvl});
+
+// Toggles the collapsible body of a known-spells section.
+// hdrEl = the clicked header <div>; its nextElementSibling is the body panel.
+function pmKnownToggle(hdrEl) {
+  var body = hdrEl.nextElementSibling;
+  if (body) body.style.display = body.style.display === 'none' ? 'block' : 'none';
+}
+
+// Re-counts checked class-tier items and refreshes the badge in the section header.
+// Only class-tier checkboxes (data-tier="class") count against the limit.
+// Bonus-tier checkboxes are always free and never trigger the over-limit colour.
+function pmKnownUpdateBadge(chk) {
+  var sec = chk.closest('.pm-known-sec');
+  if (!sec) return;
+  var badge = sec.querySelector('.pm-kn-badge');
+  if (!badge) return;
+  var classChk = sec.querySelectorAll('input[type=checkbox][data-tier="class"]:checked').length;
+  var limStr   = badge.dataset.lim;
+  var hasLimit = limStr !== '';
+  badge.textContent = hasLimit ? classChk + '/' + limStr : '' + classChk;
+  badge.style.color = (hasLimit && classChk > parseInt(limStr)) ? '#e07870' : 'var(--gold)';
+}
+
+// Builds the HTML for one party-member card.
+// Shows name/race/class/spellMod inputs plus — for existing characters — the
+// collapsible "Known Spells" panels populated from KNOWN and CHAR_INFO.
+function buildMemberCard(name, baseRace, subrace, clsList, spellMod) {
+  if (!clsList || !clsList.length) clsList = [{ cls: '', sub: '' }];
+  var mod = parseInt(spellMod) || 0;
+
+  // ── Known-spells panels ──────────────────────────────────────────
+  // Only built for characters that are already saved to CHAR_INFO.
+  // New unsaved characters show a one-line hint instead.
+  var knownSection = '';
+  if (name && CHAR_INFO[name]) {
+    var kd = KNOWN[name] || { cantrips: [], spells: [] };
+    var kc = kd.cantrips || [];
+    var ks = kd.spells   || [];
+    var lim = getKnownLimits(name);
+
+    // Pool of learnable cantrips (A→Z) and leveled spells (level asc, then A→Z)
+    var poolC = getLearnableSpells(name, true);
+    var poolS = getLearnableSpells(name, false);
+    poolC.sort(function(a, b){ return a.spell.name.localeCompare(b.spell.name); });
+    poolS.sort(function(a, b){
+      var ld = (LO[a.spell.level]||0) - (LO[b.spell.level]||0);
+      return ld !== 0 ? ld : a.spell.name.localeCompare(b.spell.name);
     });
-    if(!classes.length)classes=[{cls:'',sub:''}];
-    var modEl=el.querySelector('.pm-spell-mod');
-    var spellMod=modEl?parseInt(modEl.value)||0:0;
-    if(name)members.push({name:name,classes:classes,race:race,spellMod:spellMod});
-  });
-  var newChars=members.map(function(m){return m.name;});
-  var newCharInfo={};
-  members.forEach(function(m){newCharInfo[m.name]={classes:m.classes,race:m.race,spellMod:m.spellMod||0};});
-  // Update all spell records
-  all.forEach(function(sp){
-    CHARS.forEach(function(c){if(!newChars.includes(c))delete sp[c];});
-  });
-  CHARS=newChars;CHAR_INFO=newCharInfo;
-  CHARS.forEach(function(c,i){if(!CHC[c])CHC[c]=CHP[i%CHP.length];activeMode[c]='off';});
-  // Rebuild header & buttons
-  var hr=document.getElementById('theadRow');
-  hr.querySelectorAll('.th-char').forEach(function(th){th.remove();});
-  CHARS.forEach(function(c,i){var th=document.createElement('th');th.id='thc'+i;th.className='th-char';th.textContent=c;th.style.background=CHC[c];th.style.color='#1a1a1a';th.style.fontSize='9px';th.style.whiteSpace='nowrap';hr.appendChild(th);});
-  var btnHtml2=CHARS.map(function(c,i){var info=CHAR_INFO[c]||{};return '<button class="cbtn" style="background:'+CHC[c]+';color:#1a1a1a;border-color:'+CHC[c]+'" data-c="'+c+'" data-i="'+i+'" onclick="toggleChar(this)">'+c+'</button>';}).join('');
-  document.getElementById('charBtns').innerHTML=btnHtml2;
-  var charBtnsM2=document.getElementById('charBtnsM');
-  if(charBtnsM2) charBtnsM2.innerHTML=btnHtml2;
-  var fdParty2=document.getElementById('fdParty');
-  if(fdParty2) fdParty2.style.display=CHARS.length?'block':'none';
-  document.getElementById('charColBtns').innerHTML=CHARS.map(function(c,i){return '<button class="cbtn-col" data-i="'+i+'" onclick="toggleColChar('+i+')" title="Collapse '+c+'">'+c[0]+'</button>';}).join('');
-  // Persist party config
-  try{localStorage.setItem('bg3charInfo',JSON.stringify(CHAR_INFO));localStorage.setItem('bg3chars',JSON.stringify(CHARS));}catch(e){}
-  _scheduleFirestoreSave();
-  // Rebuild spell lookup map
-  allSpellsMap={};all.forEach(function(sp){allSpellsMap[sp.name]=sp;});
-  // Clear prepared marks only for spells a character can no longer know
-  all.forEach(function(sp){
-    CHARS.forEach(function(c){
-      if(sp[c]==='✅'&&!charCanHave(sp,c))sp[c]='';
+
+    // Always show cantrips section when cantrips are available
+    var showC = poolC.length > 0;
+
+    // Show spell section only for known-spell classes (have a cap),
+    // Wizard (unlimited spellbook), or any class with bonus feat/item spells.
+    // Prepared classes (Cleric/Druid/Paladin) are excluded unless they have bonuses.
+    var hasSCap        = lim.spells !== null || charIsWizard(name);
+    var hasBonusSpells = poolS.some(function(e){ return e.tier === 'bonus'; });
+    var showS = poolS.length > 0 && (hasSCap || hasBonusSpells);
+
+    if (showC || showS) {
+      knownSection =
+        '<div style="margin-top:2px">'
+        + '<div style="font-size:8px;font-family:Cinzel,serif;text-transform:uppercase;'
+        +            'letter-spacing:1px;color:var(--text3);padding-top:4px;text-align:right">'
+        + '▾ Known Spells — click a section to expand</div>'
+        + (showC ? buildKnownSectionHTML(poolC, kc, lim.cantrips || 0, 'c') : '')
+        + (showS ? buildKnownSectionHTML(poolS, ks, lim.spells,        's') : '')
+        + '</div>';
+    }
+  } else if (name) {
+    // Character name entered but CHAR_INFO not yet populated (first save pending)
+    knownSection =
+      '<div style="font-size:10px;color:var(--text3);margin-top:8px;'
+      +           'border-top:1px solid var(--border);padding-top:6px;text-align:center">'
+      + 'Save party first to configure known spells'
+      + '</div>';
+  }
+
+  return '<div class="pm-card" style="background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:8px 10px;margin-bottom:6px">'
+    + '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">'
+    +   '<input type="text" placeholder="Character name" class="pm-name" style="flex:1;font-weight:600;font-size:12px" value="' + name + '">'
+    +   '<button class="btn btn-danger" style="padding:4px 8px;flex-shrink:0" onclick="this.closest(\'.pm-card\').remove()">✕</button>'
+    + '</div>'
+    + '<div style="display:flex;gap:4px;margin-bottom:6px;align-items:center">'
+    +   '<span style="font-size:9px;color:var(--text);letter-spacing:1px;text-transform:uppercase;font-family:Cinzel,serif;white-space:nowrap;width:36px">Race</span>'
+    +   buildRaceSelect(baseRace, subrace)
+    + '</div>'
+    + '<div style="font-size:9px;color:var(--text);letter-spacing:1px;text-transform:uppercase;font-family:Cinzel,serif;margin-bottom:3px">Classes</div>'
+    + '<div class="pm-cls-rows">' + pmClsHTML(clsList) + '</div>'
+    + '<div style="display:flex;gap:6px;align-items:center;margin-top:7px">'
+    +   '<button class="btn" onclick="addPmCls(this)" style="font-size:10px;padding:2px 8px">+ Add class</button>'
+    +   '<div style="margin-left:auto;display:flex;align-items:center;gap:5px">'
+    +     '<span style="font-size:9px;color:var(--text);letter-spacing:1px;text-transform:uppercase;font-family:Cinzel,serif;white-space:nowrap"'
+    +           ' title="Spellcasting ability modifier added to prepared spell limit (WIS for Cleric/Druid, INT for Wizard, CHA for Paladin)">Spell Mod</span>'
+    +     '<input type="number" class="pm-spell-mod" value="' + mod + '" min="-5" max="10"'
+    +            ' style="width:54px;font-size:12px;padding:3px 6px;text-align:center"'
+    +            ' title="Spellcasting ability modifier (WIS for Cleric/Druid, INT for Wizard, CHA for Paladin)">'
+    +   '</div>'
+    + '</div>'
+    + knownSection
+    + '</div>';
+}
+
+function removePartyMember(i){ var el=document.getElementById('pm_'+i); if(el) el.remove(); }
+function removePmCard(i)     { var el=document.getElementById('pm_'+i); if(el) el.remove(); }
+
+// Reads the party modal grid, updates CHARS / CHAR_INFO / KNOWN, syncs
+// known cantrips to the prepared state, persists everything, and re-renders.
+function saveParty() {
+  var members = [];
+  document.querySelectorAll('.pm-card').forEach(function(el) {
+    var name = el.querySelector('.pm-name').value.trim();
+    if (!name) return;
+
+    // Race: prefer subrace selection when set, fall back to base race
+    var baseRaceSel = el.querySelector('.pm-race-sel');
+    var subraceSel  = el.querySelector('.pm-subrace-sel');
+    var race = (subraceSel ? subraceSel.value : '') || (baseRaceSel ? baseRaceSel.value : '');
+
+    // Classes: collect all filled-in class rows
+    var classes = [];
+    el.querySelectorAll('.pm-cls-row').forEach(function(row) {
+      var cls = (row.querySelector('.pm-cls-sel') || {}).value || '';
+      var sub = (row.querySelector('.pm-sub-sel') || {}).value || '';
+      var lvl = parseInt((row.querySelector('.pm-lvl-sel') || {}).value || '1') || 1;
+      if (cls.trim()) classes.push({ cls: cls.trim(), sub: sub.trim(), lvl: lvl });
     });
+    if (!classes.length) classes = [{ cls: '', sub: '' }];
+
+    var spellMod = parseInt((el.querySelector('.pm-spell-mod') || {}).value || '0') || 0;
+
+    // Known spells: read checked checkboxes from the two known-spell sections
+    var knownCantrips = [], knownSpells = [];
+    el.querySelectorAll('.pm-kc-chk:checked').forEach(function(c){ knownCantrips.push(c.value); });
+    el.querySelectorAll('.pm-ks-chk:checked').forEach(function(c){ knownSpells.push(c.value); });
+
+    members.push({ name: name, classes: classes, race: race, spellMod: spellMod,
+                   knownCantrips: knownCantrips, knownSpells: knownSpells });
   });
+
+  var newChars    = members.map(function(m){ return m.name; });
+  var newCharInfo = {};
+  var newKnown    = {};
+  members.forEach(function(m) {
+    newCharInfo[m.name] = { classes: m.classes, race: m.race, spellMod: m.spellMod };
+    // Only store KNOWN entry when the character has made explicit selections
+    if (m.knownCantrips.length || m.knownSpells.length) {
+      newKnown[m.name] = { cantrips: m.knownCantrips, spells: m.knownSpells };
+    }
+  });
+
+  // Remove prepared marks for characters that are being deleted
+  all.forEach(function(sp) {
+    CHARS.forEach(function(c){ if (newChars.indexOf(c) < 0) delete sp[c]; });
+  });
+
+  CHARS     = newChars;
+  CHAR_INFO = newCharInfo;
+  KNOWN     = newKnown;
+  CHARS.forEach(function(c, i){ if (!CHC[c]) CHC[c] = CHP[i % CHP.length]; activeMode[c] = 'off'; });
+
+  // Rebuild table header columns
+  var hr = document.getElementById('theadRow');
+  hr.querySelectorAll('.th-char').forEach(function(th){ th.remove(); });
+  CHARS.forEach(function(c, i) {
+    var th = document.createElement('th');
+    th.id = 'thc' + i; th.className = 'th-char'; th.textContent = c;
+    th.style.background = CHC[c]; th.style.color = '#1a1a1a';
+    th.style.fontSize = '9px'; th.style.whiteSpace = 'nowrap';
+    hr.appendChild(th);
+  });
+
+  // Rebuild character filter buttons (desktop + mobile mirror)
+  var btnHtml = CHARS.map(function(c, i) {
+    return '<button class="cbtn" style="background:' + CHC[c] + ';color:#1a1a1a;border-color:' + CHC[c] + '"'
+      + ' data-c="' + c + '" data-i="' + i + '" onclick="toggleChar(this)">' + c + '</button>';
+  }).join('');
+  document.getElementById('charBtns').innerHTML = btnHtml;
+  var charBtnsM = document.getElementById('charBtnsM');
+  if (charBtnsM) charBtnsM.innerHTML = btnHtml;
+  var fdParty = document.getElementById('fdParty');
+  if (fdParty) fdParty.style.display = CHARS.length ? 'block' : 'none';
+  document.getElementById('charColBtns').innerHTML = CHARS.map(function(c, i) {
+    return '<button class="cbtn-col" data-i="' + i + '" onclick="toggleColChar(' + i + ')" title="Collapse ' + c + '">' + c[0] + '</button>';
+  }).join('');
+
+  // Persist party config to localStorage
+  try {
+    localStorage.setItem('bg3charInfo', JSON.stringify(CHAR_INFO));
+    localStorage.setItem('bg3chars',    JSON.stringify(CHARS));
+  } catch(e) {}
+
+  // Rebuild spell lookup map after party change
+  allSpellsMap = {};
+  all.forEach(function(sp){ allSpellsMap[sp.name] = sp; });
+
+  // Clear prepared marks for spells a character can no longer access
+  all.forEach(function(sp) {
+    CHARS.forEach(function(c){ if (sp[c] === '✅' && !charCanHave(sp, c)) sp[c] = ''; });
+  });
+
+  // Auto-prepare every known cantrip (class/race only) for each member.
+  // This must run after CHAR_INFO is updated so charCanHaveClassRace is accurate.
+  CHARS.forEach(function(c){ syncKnownCantrips(c); });
+
   savePrepared();
-  closePartyModal();doFilter();
-  notify('✓ Party updated — '+CHARS.length+' members');
+  saveKnown();
+  closePartyModal();
+  doFilter();
+  notify('✓ Party updated — ' + CHARS.length + ' members');
 }
 
 // ═══════════════════════════════════

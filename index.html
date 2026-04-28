@@ -3312,7 +3312,10 @@ function getKnownLimits(charName) {
     // s:null (Cleric/Druid/Paladin/Wizard) → no fixed "known" cap
   });
 
-  return { cantrips: totalC, spells: hasSpellLimit ? totalS : null };
+  // Wizards have no cantrip cap either — they can scribe cantrip scrolls
+  // just like leveled spell scrolls, so their cantrip pool is unlimited.
+  var isWiz = classes.some(function(e){ return e.cls === 'Wizard'; });
+  return { cantrips: isWiz ? null : totalC, spells: hasSpellLimit ? totalS : null };
 }
 
 // Like charCanHave() but only matches class and race sources.
@@ -3402,11 +3405,17 @@ function getLearnableSpells(charName, cantripOnly) {
     var fromClassRace = charCanHaveClassRace(sp, charName);
     // Wizard scroll scribing: any leveled spell that has a scroll
     var fromScroll    = isWiz && !isCantrip && !!sp.scrolls;
-    // Feat/item bonus spells: charCanHave returns true but class/race check fails
-    var fromFeatItem  = !fromClassRace && !fromScroll && charCanHave(sp, charName);
 
-    if (fromClassRace || fromScroll) result.push({ spell: sp, tier: 'class' });
-    else if (fromFeatItem)           result.push({ spell: sp, tier: 'bonus' });
+    if (fromClassRace || fromScroll) {
+      result.push({ spell: sp, tier: 'class' });
+      return;
+    }
+
+    // Bonus spells — anyone can acquire a feat or equip an item in BG3,
+    // so these are available to all characters regardless of class.
+    // Spells with both features and items are shown under 'feature'.
+    if (sp.features) result.push({ spell: sp, tier: 'feature' });
+    else if (sp.items) result.push({ spell: sp, tier: 'item' });
   });
   return result;
 }
@@ -4327,15 +4336,14 @@ function renderPrepSpells(){
 function setPrepared(spellName,checked,el){
   var sp=allSpellsMap[spellName];
   if(!sp||!_prepChar)return;
-  // Enforce limit for leveled spells
+  // Soft warning when over the class prep limit — does NOT block preparation
+  // because feats and items can grant additional prepared spells beyond the class cap.
   if(checked&&sp.level!=='Cantrip'){
     var limit=charPrepLimit(_prepChar);
     if(limit!==null){
       var cur=all.filter(function(s){return s[_prepChar]==='✅'&&s.level!=='Cantrip';}).length;
       if(cur>=limit){
-        notify(_prepChar+' can only prepare '+limit+' spell'+(limit===1?'':'s'));
-        if(el)el.checked=false;
-        return;
+        notify('⚠ '+_prepChar+' is over the base prep limit ('+limit+') — allowed via feats/items');
       }
     }
   }
@@ -4810,50 +4818,68 @@ function addPartyMember(){
 //
 // Only class-tier items count toward limitN; bonus (feat/item) items are shown
 // in a separate sub-group and never reduce the remaining budget.
+// Builds one collapsible "Known Spells" panel (cantrips or leveled spells).
+//
+//   items  — [{ spell, tier:'class'|'feature'|'item' }] sorted learnable list
+//   known  — string[] of currently known spell names for this character
+//   limitN — number (hard cap) or null (Wizard / prepared classes = unlimited)
+//   type   — 'c' → cantrip checkboxes (.pm-kc-chk)
+//            's' → spell  checkboxes (.pm-ks-chk)
+//
+// Rendered groups (each only if non-empty):
+//   1. Class & Race spells  — count toward limitN
+//   2. Features             — bonus; shown under "— Features —" divider
+//   3. Items                — bonus; shown under "— Items —" divider
+//
+// Only class-tier selections count toward the badge limit; feature/item
+// selections are free and never trigger the over-limit colour.
 function buildKnownSectionHTML(items, known, limitN, type) {
-  var classItems = items.filter(function(e){ return e.tier === 'class'; });
-  var bonusItems = items.filter(function(e){ return e.tier === 'bonus'; });
-  var classChk   = classItems.filter(function(e){ return known.indexOf(e.spell.name) >= 0; }).length;
-  var hasLimit   = limitN !== null && limitN !== undefined;
-  var badge      = hasLimit ? classChk + '/' + limitN : '' + classChk;
-  var over       = hasLimit && classChk > limitN;
-  var badgeClr   = over ? '#e07870' : 'var(--gold)';
-  var label      = type === 'c' ? 'Cantrips' : 'Spells Known';
+  var classItems   = items.filter(function(e){ return e.tier === 'class';   });
+  var featItems    = items.filter(function(e){ return e.tier === 'feature'; });
+  var itemItems    = items.filter(function(e){ return e.tier === 'item';    });
 
-  // Builds one checkbox label row for a spell entry
+  var classChk = classItems.filter(function(e){ return known.indexOf(e.spell.name) >= 0; }).length;
+  var hasLimit = limitN !== null && limitN !== undefined;
+  var badge    = hasLimit ? classChk + '/' + limitN : '' + classChk;
+  var over     = hasLimit && classChk > limitN;
+  var badgeClr = over ? '#e07870' : 'var(--gold)';
+  var label    = type === 'c' ? 'Cantrips' : 'Spells Known';
+
+  // Single checkbox row for any spell entry
   function itemRow(e) {
-    var sp    = e.spell;
-    var chk   = known.indexOf(sp.name) >= 0;
+    var sp     = e.spell;
+    var chk    = known.indexOf(sp.name) >= 0;
     var lvlPfx = sp.level !== 'Cantrip'
-      ? '<span style="font-size:9px;color:var(--text3);margin-right:2px">' + sp.level.replace('Level ','L') + '</span>'
+      ? '<span style="font-size:9px;color:var(--text3);margin-right:2px">'
+          + sp.level.replace('Level ','L') + '</span>'
       : '';
-    // Escape single-quotes in spell names for the value attribute
     var safeVal = sp.name.replace(/'/g, '&#39;');
     return '<label style="display:flex;gap:5px;padding:2px 0;cursor:pointer;align-items:baseline">'
-      + '<input type="checkbox" class="pm-k' + type + '-chk" value="' + safeVal + '" data-tier="' + e.tier + '"'
-      + (chk ? ' checked' : '')
+      + '<input type="checkbox" class="pm-k' + type + '-chk" value="' + safeVal
+      + '" data-tier="' + e.tier + '"' + (chk ? ' checked' : '')
       + ' onchange="pmKnownUpdateBadge(this)"'
       + ' style="flex-shrink:0;accent-color:var(--gold);cursor:pointer;margin-top:2px">'
       + '<span style="font-size:11px;line-height:1.4">' + lvlPfx + sp.name + '</span>'
       + '</label>';
   }
 
-  var classHTML = classItems.map(itemRow).join('');
-  var bonusHTML = bonusItems.length
-    ? '<div style="border-top:1px solid var(--border);margin-top:4px;padding-top:3px">'
-        + '<span style="font-size:8px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3)">'
-        + 'Bonus (feats &amp; items)</span>'
-        + bonusItems.map(itemRow).join('')
-      + '</div>'
-    : '';
+  // Sub-group divider + rows — only rendered when the group has entries
+  function groupHTML(groupItems, groupLabel) {
+    if (!groupItems.length) return '';
+    return '<div style="border-top:1px solid var(--border);margin-top:4px;padding-top:3px">'
+      + '<span style="font-size:8px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3)">'
+      + '— ' + groupLabel + ' —</span>'
+      + groupItems.map(itemRow).join('')
+      + '</div>';
+  }
 
-  // Inline search: filters labels by text content without a named function call
+  // Inline search — filters all label rows by text content
   var srchScript = "var q=this.value.toLowerCase();"
     + "this.nextElementSibling.querySelectorAll('label')"
     + ".forEach(function(l){l.style.display=l.textContent.toLowerCase().indexOf(q)>-1?'flex':'none';})";
 
   return '<div class="pm-known-sec" data-type="' + type + '">'
-    // Header — click anywhere on the row to expand/collapse
+    // Clickable header — toggles body open/closed
     + '<div onclick="pmKnownToggle(this)"'
     +   ' style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;'
     +          'padding:4px 0;user-select:none;border-top:1px solid var(--border);margin-top:6px">'
@@ -4863,12 +4889,14 @@ function buildKnownSectionHTML(items, known, limitN, type) {
     +         ' style="font-size:9px;padding:1px 7px;border-radius:10px;'
     +                'background:var(--bg2);color:' + badgeClr + '">' + badge + '</span>'
     + '</div>'
-    // Body — collapsed by default, revealed on header click
+    // Collapsible body
     + '<div style="display:none;margin-bottom:4px">'
     +   '<input type="text" placeholder="Search…" oninput="' + srchScript + '"'
     +          ' style="width:100%;font-size:10px;padding:2px 5px;margin-bottom:3px;box-sizing:border-box">'
     +   '<div style="max-height:130px;overflow-y:auto;padding-right:2px">'
-    +     classHTML + bonusHTML
+    +     classItems.map(itemRow).join('')      // Class & Race spells (no divider needed)
+    +     groupHTML(featItems, 'Features')      // Feature-granted spells
+    +     groupHTML(itemItems, 'Items')         // Item-granted spells
     +   '</div>'
     + '</div>'
     + '</div>';
@@ -4923,6 +4951,9 @@ function buildMemberCard(name, baseRace, subrace, clsList, spellMod) {
     });
 
     // Always show cantrips section when cantrips are available
+    // Show cantrip section whenever any cantrips are available — class limit of 0
+    // (e.g. Paladin) does not hide the section because race/feat/item cantrips
+    // can still exist independently of the class budget.
     var showC = poolC.length > 0;
 
     // Show spell section only for known-spell classes (have a cap),
@@ -4938,7 +4969,7 @@ function buildMemberCard(name, baseRace, subrace, clsList, spellMod) {
         + '<div style="font-size:8px;font-family:Cinzel,serif;text-transform:uppercase;'
         +            'letter-spacing:1px;color:var(--text3);padding-top:4px;text-align:right">'
         + '▾ Known Spells — click a section to expand</div>'
-        + (showC ? buildKnownSectionHTML(poolC, kc, lim.cantrips || 0, 'c') : '')
+        + (showC ? buildKnownSectionHTML(poolC, kc, lim.cantrips, 'c') : '')
         + (showS ? buildKnownSectionHTML(poolS, ks, lim.spells,        's') : '')
         + '</div>';
     }

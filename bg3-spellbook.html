@@ -2624,24 +2624,12 @@ var EMBEDDED_DATA = (function(){
 {"name":"Restore Vitality","level":"Level 5","school":"Abjuration","classes":"","races":"","features":"","items":"","scrolls":"","used":0,"cost":"Action","damage_types":[],"save":"","attack_roll":false,"concentration":false,"ritual":false,"conditions":[],"tags":["Healing","Support"],"parent":"Warden of Vitality","description":"Restore Vitality is a level 3 evocation spell. It is a situational spell granted upon casting Warden of Vitality that heals the caster or an ally with just the use of a Bonus Action.","range":"9 m (30 ft)"},
 {"name":"Otiluke's Conveniently Portable Freezing Sphere","level":"Level 6","school":"Evocation","classes":"","races":"","features":"","items":"","scrolls":"","used":0,"cost":"Action","damage_types":["Cold"],"save":"CON","attack_roll":false,"concentration":false,"ritual":false,"conditions":[],"tags":["Damage","AoE"],"parent":"Otiluke's Freezing Sphere","description":"Otiluke&#039;s Conveniently Portable Freezing Sphere is a level 6 evocation spell."}
 ];
-  // Normalise: ensure all char fields exist  
-  var CHAR_LIST = ["Vira","Astarion","Gale","Lae'zel","Karlach","Shadowheart","Wyll"];
-  spells.forEach(function(s){
-    s.used = s.used || 0;
-    CHAR_LIST.forEach(function(c){ if(!s[c]) s[c] = ''; });
-  });
+  // Normalise used counts
+  spells.forEach(function(s){ s.used = s.used || 0; });
   return {
     spells: spells,
-    chars: CHAR_LIST,
-    charInfo: {
-      "Vira":        {"classes":[{"cls":"Paladin","sub":"Oathbreaker"}],"race":"Wood Half-Elf"},
-      "Astarion":    {"classes":[{"cls":"Rogue","sub":"Arcane Trickster"}],"race":"High Elf"},
-      "Gale":        {"classes":[{"cls":"Wizard","sub":""}],"race":"Human"},
-      "Lae'zel":    {"classes":[{"cls":"Fighter","sub":"Battle Master"}],"race":"Githyanki"},
-      "Karlach":     {"classes":[{"cls":"Barbarian","sub":"Berserker"}],"race":"Zariel Tiefling"},
-      "Shadowheart": {"classes":[{"cls":"Cleric","sub":"Trickery Domain"}],"race":"Half-Elf"},
-      "Wyll":        {"classes":[{"cls":"Warlock","sub":"The Fiend"}],"race":"Human"}
-    }
+    chars: [],
+    charInfo: {}
   };
 })();
 

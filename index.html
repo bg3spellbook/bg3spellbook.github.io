@@ -4355,14 +4355,11 @@ function renderPrepCharTabs(){
   document.getElementById('prepCharTabs').innerHTML=html;
 }
 // Builds the pool of leveled spells a character can prepare.
-// Rules:
-//   • Cantrips are NEVER included (they are auto-prepared when learned).
-//   • Variant spells are excluded.
-//   • Prepared-list classes (Cleric/Druid/Paladin/Wizard): all class spells
-//     up to the character's current max spell-slot level.
-//   • Known-spell classes (Bard/Sorc/Warlock/Ranger/EK/AT): only the spells
-//     explicitly chosen in the party popup (KNOWN[charName].spells).
-//   • Race/feature/item spells: always included for any character (no known gate).
+// The prepare pool is exactly KNOWN[charName].spells — whatever the user
+// has explicitly selected in the party popup Known list. This applies to
+// all classes equally (Cleric/Druid/Paladin/Wizard included). The user is
+// responsible for populating their Known list; the prepare popup just
+// reflects it. Cantrips and variant spells are always excluded.
 function getPreparableSpells(charName) {
   var seen = new Set();
   var result = [];
@@ -4372,43 +4369,18 @@ function getPreparableSpells(charName) {
     result.push(sp);
   }
 
-  var info = CHAR_INFO[charName];
-  if (!info) return result;
-  var classes = info.classes && info.classes.length
-    ? info.classes
-    : [{ cls: info.cls||'', sub: info.sub||'', lvl: info.lvl||1 }];
-  var maxSlot = getMaxSlotLevel(charName);
-
-  // Prepared-list classes: include every class spell up to the slot-level cap.
-  var hasPrepClass = classes.some(function(e) {
-    return !!PREP_LIMIT_FN[S2C[e.sub||''] || e.cls || ''];
-  });
-  if (hasPrepClass) {
-    all.forEach(function(sp) {
-      if (sp.level === 'Cantrip' || isVariant(sp)) return;
-      if ((LO[sp.level] || 0) > maxSlot) return;
-      if (charCanHaveClass(sp, charName)) add(sp);
-    });
-  }
-
-  // Known-spell classes: only spells the user explicitly selected.
   var knownNames = (KNOWN[charName] && KNOWN[charName].spells) || [];
   knownNames.forEach(function(name) {
     var sp = allSpellsMap[name];
     if (sp) add(sp);
   });
 
-  // Race / feature / item spells: always prepareable, no known-gate needed.
-  getLearnableSpells(charName, false).forEach(function(e) {
-    if (e.tier !== 'class') add(e.spell);
-  });
-
   return result;
 }
 
 // Renders the spell list for the currently selected character (_prepChar).
-// Uses getPreparableSpells() to build the correct pool (prepared-class full list,
-// known-class selection, plus race/feat/item spells). Cantrips are never shown.
+// Uses getPreparableSpells() which returns exactly KNOWN[charName].spells
+// (minus cantrips and variants). Cantrips are never shown.
 function renderPrepSpells(){
   if(!_prepChar)return;
   var q=(document.getElementById('prepSearch').value||'').toLowerCase().trim();

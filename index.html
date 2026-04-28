@@ -5231,13 +5231,18 @@ function saveParty() {
   allSpellsMap = {};
   all.forEach(function(sp){ allSpellsMap[sp.name] = sp; });
 
-  // Clear prepared marks for spells a character can no longer access
-  all.forEach(function(sp) {
-    CHARS.forEach(function(c){ if (sp[c] === '✅' && !charCanHave(sp, c)) sp[c] = ''; });
+  // Un-prepare any spell no longer in the character's prepareable pool.
+  // This covers two cases:
+  //   1. Spell removed from the Known list → no longer in getPreparableSpells()
+  //   2. Spell no longer accessible at all (class/race changed)
+  CHARS.forEach(function(c) {
+    var pool = new Set(getPreparableSpells(c).map(function(s){ return s.name; }));
+    all.forEach(function(sp) {
+      if (sp[c] === '✅' && sp.level !== 'Cantrip' && !pool.has(sp.name)) sp[c] = '';
+    });
   });
 
-  // Auto-prepare every known cantrip (class/race only) for each member.
-  // This must run after CHAR_INFO is updated so charCanHaveClassRace is accurate.
+  // Auto-prepare every known cantrip — known cantrips are always prepared in BG3.
   CHARS.forEach(function(c){ syncKnownCantrips(c); });
 
   savePrepared();

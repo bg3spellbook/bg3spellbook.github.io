@@ -10,6 +10,10 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='5' fill='%230c0f1a'/><path d='M7 11Q7 9 9 9L15 10V24Q12 23 9 24Q7 24 7 22Z' fill='%23182030' stroke='%23c9a84c' stroke-width='1.2'/><path d='M25 11Q25 9 23 9L17 10V24Q20 23 23 24Q25 24 25 22Z' fill='%23182030' stroke='%23c9a84c' stroke-width='1.2'/><line x1='15' y1='10' x2='17' y2='10' stroke='%23c9a84c' stroke-width='1.2'/><line x1='15' y1='24' x2='17' y2='24' stroke='%23c9a84c' stroke-width='1.2'/><path d='M16 2.5L17 5.5H20.2L17.6 7.3L18.6 10.3L16 8.5L13.4 10.3L14.4 7.3L11.8 5.5H15Z' fill='%23c9a84c'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<!-- Firebase SDK — Google sign-in + Firestore cross-device sync -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
 /* ═══════════════════════════════════════════════════
    TOKENS & THEME
@@ -1385,6 +1389,12 @@ td.cmp-cb-cell input { accent-color:var(--gold); cursor:pointer; width:13px; hei
 }
 .gcnt { font-size: 22px; font-weight: 700; font-family: 'Cinzel', serif; color: var(--purple); }
 .glist { font-size: 11px; color: var(--text); margin-top: 2px; line-height: 1.6; }
+
+/* ── AUTH BUTTON ── */
+#authBtn { min-width: 90px; display: inline-flex; align-items: center; gap: 5px; }
+#authBtn img { width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; }
+.auth-ok { background: rgba(82,184,112,.12) !important; border-color: rgba(82,184,112,.4) !important; color: var(--green) !important; }
+.light .auth-ok { background: rgba(20,120,50,.1) !important; border-color: rgba(20,120,50,.4) !important; color: #186030 !important; }
 </style>
 <input type="hidden" id="sortBy" value="name"><input type="hidden" id="sortDir" value="asc"></head>
 <body>
@@ -1414,7 +1424,9 @@ td.cmp-cb-cell input { accent-color:var(--gold); cursor:pointer; width:13px; hei
     <!-- Desktop actions -->
     <div class="hdr-actions">
       <button class="btn btn-gold" onclick="openImportModal()">⬆ Import</button>
+      <button class="btn btn-gold" onclick="exportDataJSON()">⬇ Export</button>
       <button class="btn btn-gold" onclick="exportAll()">📋 Copy All</button>
+      <button class="btn" id="authBtn" onclick="signInGoogle()" title="Sign in with Google to sync your party across devices">🔐 Sign in</button>
       <button class="btn btn-blue" onclick="exportFiltered()">🖨 Export PDF</button>
       <button class="btn btn-blue" onclick="printCards()">🃏 Cards</button>
       <button class="btn btn-purple" onclick="openPartyModal()">👥 Party</button>
@@ -1738,6 +1750,8 @@ td.cmp-cb-cell input { accent-color:var(--gold); cursor:pointer; width:13px; hei
   <div class="modal" style="min-width:0;max-width:320px;padding:16px">
     <h2 style="margin-bottom:12px">Actions</h2>
     <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn" id="authBtnM" onclick="mobileAuthClick()" title="Sign in with Google">🔐 Sign in</button>
+      <button class="btn btn-gold" onclick="exportDataJSON();document.getElementById('moreMenu').classList.remove('open')">⬇ Export Data</button>
       <button class="btn btn-gold" onclick="exportAll();document.getElementById('moreMenu').classList.remove('open')">📋 Copy All Spells</button>
       <button class="btn btn-blue" onclick="exportFiltered();document.getElementById('moreMenu').classList.remove('open')">🖨 Export PDF</button>
       <button class="btn btn-blue" onclick="printCards();document.getElementById('moreMenu').classList.remove('open')">🃏 Print Cards</button>
@@ -2789,8 +2803,152 @@ setTimeout(function(){
   loadData(data);
 }, 0);
 
-function saveP(){try{localStorage.setItem('bg3p',JSON.stringify([...pinned]));}catch(e){}}
-function saveN(){try{localStorage.setItem('bg3n',JSON.stringify(notes));}catch(e){}}
+// ═══════════════════════════════════════════════════════════════════════
+// FIREBASE AUTH + FIRESTORE SYNC
+// ═══════════════════════════════════════════════════════════════════════
+// Provides Google sign-in and cross-device sync via Firestore.
+// When signed in, all party/prepared/pin/note changes are written to:
+//   Firestore: users/{uid}  →  { chars, charInfo, prepared, pinned, notes, removed }
+// On sign-in the cloud state overwrites localStorage so the party appears
+// instantly on any device.
+//
+// SETUP (one-time):
+//   1. Go to https://console.firebase.google.com → create a project
+//   2. Enable Authentication → Google sign-in provider
+//   3. Enable Firestore Database (start in production mode)
+//   4. Add your Netlify URL to Authentication → Authorised domains
+//   5. Project Settings → Your apps → paste the config values below
+// ─────────────────────────────────────────────────────────────────────
+
+var FIREBASE_CONFIG = {
+  apiKey:            "",   // ← paste Firebase config values here
+  authDomain:        "",
+  projectId:         "",
+  storageBucket:     "",
+  messagingSenderId: "",
+  appId:             ""
+};
+
+var fbApp=null, fbAuth=null, fbDb=null, fbUser=null;
+(function initFirebase(){
+  if(!FIREBASE_CONFIG.apiKey){ return; }           // not configured → localStorage-only mode
+  try {
+    fbApp  = firebase.initializeApp(FIREBASE_CONFIG);
+    fbAuth = firebase.auth();
+    fbDb   = firebase.firestore();
+    fbAuth.onAuthStateChanged(function(user){
+      fbUser = user;
+      _updateAuthUI(user);
+      if(user) _loadFromFirestore(user.uid);
+    });
+  } catch(e){ console.warn('Firebase init failed:', e); }
+})();
+
+// ── Sign in / out ──────────────────────────────────────────────────────
+function signInGoogle(){
+  if(!fbAuth){ notify('⚠ Firebase not configured'); return; }
+  fbAuth.signInWithPopup(new firebase.auth.GoogleAuthProvider())
+    .catch(function(e){ notify('Sign-in failed: '+e.message); });
+}
+function signOutUser(){
+  if(!fbAuth) return;
+  fbAuth.signOut().then(function(){ notify('Signed out'); });
+}
+function mobileAuthClick(){
+  document.getElementById('moreMenu').classList.remove('open');
+  if(fbUser) signOutUser(); else signInGoogle();
+}
+
+// ── Update header button appearance ───────────────────────────────────
+function _updateAuthUI(user){
+  ['authBtn','authBtnM'].forEach(function(id){
+    var btn=document.getElementById(id); if(!btn) return;
+    if(user){
+      var first=(user.displayName||'You').split(' ')[0];
+      var avatar=user.photoURL?'<img src="'+user.photoURL+'" alt="">':'';
+      btn.innerHTML=avatar+first;
+      btn.title='Signed in as '+user.email+'\nClick to sign out';
+      btn.classList.add('auth-ok');
+      btn.onclick = id==='authBtn' ? signOutUser : function(){ document.getElementById('moreMenu').classList.remove('open'); signOutUser(); };
+    } else {
+      btn.innerHTML='🔐 Sign in';
+      btn.title='Sign in with Google to sync across devices';
+      btn.classList.remove('auth-ok');
+      btn.onclick = id==='authBtn' ? signInGoogle : function(){ document.getElementById('moreMenu').classList.remove('open'); signInGoogle(); };
+    }
+  });
+}
+
+// ── Firestore load (on sign-in) ─────────────────────────────────────
+function _loadFromFirestore(uid){
+  fbDb.collection('users').doc(uid).get().then(function(doc){
+    if(!doc.exists){ notify('☁ Signed in — no cloud data yet'); return; }
+    var d=doc.data();
+    try{
+      if(d.chars)   { localStorage.setItem('bg3chars',   JSON.stringify(d.chars));   }
+      if(d.charInfo){ localStorage.setItem('bg3charInfo',JSON.stringify(d.charInfo));}
+      if(d.prepared){ localStorage.setItem('bg3prepared',JSON.stringify(d.prepared));}
+      if(d.pinned)  { pinned=new Set(d.pinned); localStorage.setItem('bg3p',JSON.stringify(d.pinned)); }
+      if(d.notes)   { notes=d.notes;            localStorage.setItem('bg3n',JSON.stringify(d.notes));  }
+      if(d.removed) { localStorage.setItem('bg3removed',JSON.stringify(d.removed));  }
+    }catch(e){}
+    // Reload runtime state from the freshly written localStorage values
+    var data=EMBEDDED_DATA;
+    if(d.chars)    data.chars    = d.chars;
+    if(d.charInfo) data.charInfo = d.charInfo;
+    loadData(data);
+    notify('☁ Party loaded from cloud');
+  }).catch(function(e){ console.warn('Firestore load failed:',e); });
+}
+
+// ── Firestore save (debounced, triggered by every mutation) ────────────
+var _fbSaveTimer=null;
+function _scheduleFirestoreSave(){
+  if(!fbUser||!fbDb) return;
+  clearTimeout(_fbSaveTimer);
+  _fbSaveTimer=setTimeout(_saveToFirestore, 1500);
+}
+function _saveToFirestore(){
+  if(!fbUser||!fbDb) return;
+  var prep={};
+  all.forEach(function(sp){
+    CHARS.forEach(function(c){ if(sp[c]==='✅'){ if(!prep[sp.name])prep[sp.name]={}; prep[sp.name][c]='✅'; } });
+  });
+  fbDb.collection('users').doc(fbUser.uid).set({
+    chars:    CHARS,
+    charInfo: CHAR_INFO,
+    prepared: prep,
+    pinned:   [...pinned],
+    notes:    notes,
+    removed:  getRemoved()
+  }).catch(function(e){ console.warn('Firestore save failed:',e); });
+}
+
+// ── JSON Export  ────────────────────────────────────────────────────────
+// Downloads all party + overlay data as a JSON file that can be re-imported
+// via the Import modal on any device (even without sign-in).
+function exportDataJSON(){
+  var prep={};
+  all.forEach(function(sp){
+    CHARS.forEach(function(c){ if(sp[c]==='✅'){ if(!prep[sp.name])prep[sp.name]={}; prep[sp.name][c]='✅'; }});
+  });
+  var payload=JSON.stringify({
+    chars:    CHARS,
+    charInfo: CHAR_INFO,
+    prepared: prep,
+    pinned:   [...pinned],
+    notes:    notes,
+    removed:  getRemoved()
+  }, null, 2);
+  var a=document.createElement('a');
+  a.href='data:application/json;charset=utf-8,'+encodeURIComponent(payload);
+  a.download='bg3-spellbook-export.json';
+  a.click();
+  notify('⬇ Exported party data');
+}
+
+function saveP(){try{localStorage.setItem('bg3p',JSON.stringify([...pinned]));}catch(e){} _scheduleFirestoreSave();}
+function saveN(){try{localStorage.setItem('bg3n',JSON.stringify(notes));}catch(e){} _scheduleFirestoreSave();}
 function savePrepared(){
   var map={};
   all.forEach(function(sp){
@@ -2802,6 +2960,7 @@ function savePrepared(){
     });
   });
   try{localStorage.setItem('bg3prepared',JSON.stringify(map));}catch(e){}
+  _scheduleFirestoreSave();
 }
 function loadPrepared(){
   try{
@@ -4193,9 +4352,33 @@ function doImport(){
   if(!raw){notify('⚠ Paste JSON first');return;}
   try{
     var data=JSON.parse(raw);
+    // Full export format (from ⬇ Export): may have no spells array — overlay only
+    if(!data.spells){
+      // Treat as overlay import: restore party/prepared/pins/notes/removed then reload embedded spells
+      try{
+        if(data.chars)    localStorage.setItem('bg3chars',    JSON.stringify(data.chars));
+        if(data.charInfo) localStorage.setItem('bg3charInfo', JSON.stringify(data.charInfo));
+        if(data.prepared) localStorage.setItem('bg3prepared', JSON.stringify(data.prepared));
+        if(data.pinned)   { pinned=new Set(data.pinned); localStorage.setItem('bg3p', JSON.stringify(data.pinned)); }
+        if(data.notes)    { notes=data.notes; localStorage.setItem('bg3n', JSON.stringify(data.notes)); }
+        if(data.removed)  localStorage.setItem('bg3removed',  JSON.stringify(data.removed));
+      }catch(e2){}
+      var merged=EMBEDDED_DATA;
+      if(data.chars)    merged.chars    = data.chars;
+      if(data.charInfo) merged.charInfo = data.charInfo;
+      loadData(merged);
+      closeImportModal();
+      return;
+    }
     if(Array.isArray(data))data={spells:data,chars:[],charInfo:{}};
-    if(!data.spells)throw new Error('Missing spells array');
     data.chars=data.chars||[];data.charInfo=data.charInfo||{};
+    // Restore any overlay fields included in a legacy full export
+    try{
+      if(data.prepared) localStorage.setItem('bg3prepared', JSON.stringify(data.prepared));
+      if(data.pinned)   { pinned=new Set(data.pinned); localStorage.setItem('bg3p', JSON.stringify(data.pinned)); }
+      if(data.notes)    { notes=data.notes; localStorage.setItem('bg3n', JSON.stringify(data.notes)); }
+      if(data.removed)  localStorage.setItem('bg3removed',  JSON.stringify(data.removed));
+    }catch(e2){}
     loadData(data);
     closeImportModal();
   }catch(e){notify('⚠ Invalid JSON: '+e.message);}
@@ -4354,6 +4537,7 @@ function saveParty(){
   document.getElementById('charColBtns').innerHTML=CHARS.map(function(c,i){return '<button class="cbtn-col" data-i="'+i+'" onclick="toggleColChar('+i+')" title="Collapse '+c+'">'+c[0]+'</button>';}).join('');
   // Persist party config
   try{localStorage.setItem('bg3charInfo',JSON.stringify(CHAR_INFO));localStorage.setItem('bg3chars',JSON.stringify(CHARS));}catch(e){}
+  _scheduleFirestoreSave();
   // Rebuild spell lookup map
   allSpellsMap={};all.forEach(function(sp){allSpellsMap[sp.name]=sp;});
   // Clear prepared marks only for spells a character can no longer know
@@ -4683,6 +4867,7 @@ function removeCurrentSpell() {
   var removed = getRemoved();
   if(removed.indexOf(name) < 0) removed.push(name);
   try { localStorage.setItem('bg3removed', JSON.stringify(removed)); } catch(e){}
+  _scheduleFirestoreSave();
   // Remove from runtime arrays
   all = all.filter(function(sp){ return sp.name !== name; });
   delete allSpellsMap[name];

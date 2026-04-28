@@ -4352,7 +4352,7 @@ function selectPrepChar(c){
 function renderPrepCharTabs(){
   var html=CHARS.map(function(c){
     var active=c===_prepChar;
-    var prepCnt=all.filter(function(s){return s[c]==='✅'&&s.level!=='Cantrip'&&!isVariant(s);}).length;
+    var prepCnt=getPreparableSpells(c).filter(function(s){return s[c]==='✅';}).length;
     var limit=charPrepLimit(c);
     var over=limit!==null&&prepCnt>limit;
     var cc=over?'#e07870':(CHC[c]||'#888');
@@ -4400,7 +4400,7 @@ function renderPrepSpells(){
   if(q)pool=pool.filter(function(s){return s.name.toLowerCase().indexOf(q)>=0||(s.school||'').toLowerCase().indexOf(q)>=0;});
   var LEVEL_ORDER=['Level 1','Level 2','Level 3','Level 4','Level 5','Level 6','Level 7','Level 8','Level 9'];
   // Count only non-variant leveled spells for the limit bar
-  var prepCnt=all.filter(function(s){return s[_prepChar]==='✅'&&s.level!=='Cantrip'&&!isVariant(s);}).length;
+  var prepCnt=getPreparableSpells(_prepChar).filter(function(s){return s[_prepChar]==='✅';}).length;
   var limit=charPrepLimit(_prepChar);
   var html='';
   if(limit!==null){
@@ -4450,7 +4450,7 @@ function setPrepared(spellName,checked,el){
   if(checked&&sp.level!=='Cantrip'){
     var limit=charPrepLimit(_prepChar);
     if(limit!==null){
-      var cur=all.filter(function(s){return s[_prepChar]==='✅'&&s.level!=='Cantrip'&&!isVariant(s);}).length;
+      var cur=getPreparableSpells(_prepChar).filter(function(s){return s[_prepChar]==='✅';}).length;
       if(cur>=limit){
         notify('⚠ '+_prepChar+' is over the base prep limit ('+limit+') — allowed via feats/items');
       }

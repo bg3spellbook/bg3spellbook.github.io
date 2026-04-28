@@ -3399,21 +3399,21 @@ function getLearnableSpells(charName, cantripOnly) {
     if (cantripOnly === true  && !isCantrip) return;
     if (cantripOnly === false &&  isCantrip) return;
 
-    // Level gate for non-cantrips
-    if (!isCantrip && (LO[sp.level] || 0) > maxSlot) return;
-
     var fromClassRace = charCanHaveClassRace(sp, charName);
     // Wizard scroll scribing: any leveled spell that has a scroll
     var fromScroll    = isWiz && !isCantrip && !!sp.scrolls;
 
     if (fromClassRace || fromScroll) {
+      // Class/race and scroll spells are level-gated: you can only learn a
+      // spell if you have a high enough slot to cast it.
+      if (!isCantrip && (LO[sp.level] || 0) > maxSlot) return;
       result.push({ spell: sp, tier: 'class' });
       return;
     }
 
-    // Bonus spells — anyone can acquire a feat or equip an item in BG3,
-    // so these are available to all characters regardless of class.
-    // Spells with both features and items are shown under 'feature'.
+    // Feature and item spells bypass the slot-level gate — equipping an item
+    // or taking a feat grants the spell regardless of your caster level.
+    // (e.g. The Blood of Lathander gives Sunbeam even to a level 1 character.)
     if (sp.features) result.push({ spell: sp, tier: 'feature' });
     else if (sp.items) result.push({ spell: sp, tier: 'item' });
   });

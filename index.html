@@ -3454,18 +3454,22 @@ function getLearnableSpells(charName, cantripOnly) {
   return result;
 }
 
-// Auto-prepares (✅) every class/race cantrip that is in the character's
-// KNOWN list, and un-prepares class/race cantrips that are no longer known.
-// Feat/item cantrips are intentionally left untouched (manually managed).
-// Does nothing if the character has no known cantrips configured yet —
-// this preserves any manual preparation state from before the feature was used.
+// Auto-prepares (✅) every cantrip in the character's KNOWN list.
+// In BG3, known cantrips are always prepared — there is no "known but not prepared"
+// state for cantrips. This applies to all cantrip sources (class, race, feat, item).
+// Class/race cantrips no longer in the known list are un-prepared.
+// Feat/item cantrips not in the known list are left untouched (may be manual).
 function syncKnownCantrips(charName) {
   var kc = (KNOWN[charName] && KNOWN[charName].cantrips) || [];
-  if (!kc.length) return; // nothing configured → don't touch manual state
   all.forEach(function(sp) {
     if (sp.level !== 'Cantrip') return;
-    if (!charCanHaveClassRace(sp, charName)) return; // leave feat/item cantrips alone
-    sp[charName] = kc.indexOf(sp.name) >= 0 ? '✅' : '';
+    var inKnown = kc.indexOf(sp.name) >= 0;
+    if (inKnown) {
+      sp[charName] = '✅'; // known cantrips are always prepared
+    } else if (charCanHaveClassRace(sp, charName)) {
+      sp[charName] = ''; // un-prepare class/race cantrips removed from known list
+    }
+    // feat/item cantrips not in known list: leave untouched
   });
 }
 
@@ -3770,6 +3774,8 @@ function loadData(result){
   loadPrepared();
   // Restore known-spells selections from localStorage
   loadKnown();
+  // Auto-prepare all known cantrips — known cantrips are always prepared in BG3.
+  CHARS.forEach(function(c){ syncKnownCantrips(c); });
 
   // Build parent → [variant spells] map for auto-preparation sync
   variantsByParent={};

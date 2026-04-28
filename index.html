@@ -4469,18 +4469,26 @@ function setPrepared(spellName,checked,el){
 }
 
 function buildModalPartySection(sp){
-  var partyChars=CHARS.filter(function(c){return sp[c]==='✅'||charCanHave(sp,c);});
+  var partyChars=CHARS.filter(function(c){
+    if(sp[c]==='✅')return true;
+    var kn=KNOWN[c]||{};
+    if((kn.cantrips||[]).indexOf(sp.name)>=0||(kn.spells||[]).indexOf(sp.name)>=0)return true;
+    return charCanHave(sp,c)||charCanHaveRace(sp,c)||!!(sp.features||sp.items);
+  });
   if(!partyChars.length)return '';
   var h='<div class="sm-section">';
   h+='<div class="sm-section-title">Party</div>';
   h+='<div class="sm-char-grid">';
   partyChars.forEach(function(c){
     var isPrepared=sp[c]==='✅';
-    var chipBg=isPrepared?CHC[c]+'22':'transparent';
-    var chipBorder=isPrepared?CHC[c]+'66':CHC[c]+'44';
-    var dotBg=isPrepared?CHC[c]:CHC[c]+'88';
-    var stateLabel=isPrepared?'prepared':'known';
-    h+='<div class="sm-char-chip '+(isPrepared?'has':'can')+'" style="background:'+chipBg+';color:'+CHC[c]+';border-color:'+chipBorder+'">';
+    var kn=KNOWN[c]||{};
+    var isKnown=!isPrepared&&((kn.cantrips||[]).indexOf(sp.name)>=0||(kn.spells||[]).indexOf(sp.name)>=0);
+    var stateLabel=isPrepared?'prepared':isKnown?'known':'can learn';
+    var chipBg=isPrepared?CHC[c]+'22':isKnown?CHC[c]+'14':'transparent';
+    var chipBorder=isPrepared?CHC[c]+'66':isKnown?CHC[c]+'44':CHC[c]+'33';
+    var dotBg=isPrepared?CHC[c]:isKnown?CHC[c]+'99':CHC[c]+'55';
+    var stateClass=isPrepared?'has':isKnown?'known':'can';
+    h+='<div class="sm-char-chip '+stateClass+'" style="background:'+chipBg+';color:'+CHC[c]+';border-color:'+chipBorder+'">';
     h+='<div class="sm-cc-dot" style="background:'+dotBg+'"></div>';
     h+='<span>'+c+'</span>';
     h+='<span style="font-size:10px;opacity:.6;font-family:Crimson Pro,serif;font-weight:400"> — '+stateLabel+'</span>';

@@ -1395,6 +1395,18 @@ td.cmp-cb-cell input { accent-color:var(--gold); cursor:pointer; width:13px; hei
 #authBtn img { width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; }
 .auth-ok { background: rgba(82,184,112,.12) !important; border-color: rgba(82,184,112,.4) !important; color: var(--green) !important; }
 .light .auth-ok { background: rgba(20,120,50,.1) !important; border-color: rgba(20,120,50,.4) !important; color: #186030 !important; }
+
+/* ── AUTH GATE — all action buttons disabled until signed in ── */
+body.auth-locked .hdr-actions button:not(#authBtn),
+body.auth-locked .hdr-actions button:not(#authBtn) * { pointer-events: none !important; }
+body.auth-locked .hdr-actions button:not(#authBtn) { opacity: 0.3 !important; cursor: not-allowed !important; }
+body.auth-locked .bnav-btn { opacity: 0.3 !important; pointer-events: none !important; cursor: not-allowed !important; }
+body.auth-locked #moreMenu .btn:not(#authBtnM) { opacity: 0.3 !important; pointer-events: none !important; }
+body.auth-locked #authBtn { animation: authPulse 2.2s ease-in-out infinite; }
+@keyframes authPulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(201,168,76,0); }
+  50%      { box-shadow: 0 0 0 7px rgba(201,168,76,.28); }
+}
 </style>
 <input type="hidden" id="sortBy" value="name"><input type="hidden" id="sortDir" value="asc"></head>
 <body>
@@ -2792,13 +2804,22 @@ setTimeout(function(){
     // Wipe any cached spell data unconditionally
     for(var k in localStorage){ try{ if(k.indexOf('bg3spell')===0) localStorage.removeItem(k); }catch(e){} }
     localStorage.removeItem('bg3spells');
-    var savedInfo = localStorage.getItem('bg3charInfo');
-    if(savedInfo) data.charInfo = JSON.parse(savedInfo);
-    var savedChars = localStorage.getItem('bg3chars');
-    if(savedChars) data.chars = JSON.parse(savedChars);
-    // Custom spell data (overrides embedded)
-    // Custom spell data override intentionally removed — always use embedded data
-    // (localStorage 'bg3spells' was causing stale data to override the current spell list)
+    // Only restore party from localStorage when Firebase is NOT configured (offline/local mode).
+    // When Firebase IS configured, party data comes exclusively from Firestore after sign-in,
+    // so unauthenticated sessions always start with an empty party.
+    if(!FIREBASE_CONFIG.apiKey){
+      var savedInfo = localStorage.getItem('bg3charInfo');
+      if(savedInfo) data.charInfo = JSON.parse(savedInfo);
+      var savedChars = localStorage.getItem('bg3chars');
+      if(savedChars) data.chars = JSON.parse(savedChars);
+    } else {
+      // Firebase mode — clear any stale party cache so it can't bleed through
+      localStorage.removeItem('bg3chars');
+      localStorage.removeItem('bg3charInfo');
+      localStorage.removeItem('bg3prepared');
+      data.chars = [];
+      data.charInfo = {};
+    }
   } catch(e){}
   loadData(data);
 }, 0);
@@ -2834,6 +2855,8 @@ var FIREBASE_CONFIG = {
 var fbApp=null, fbAuth=null, fbDb=null, fbUser=null;
 (function initFirebase(){
   if(!FIREBASE_CONFIG.apiKey){ return; }           // not configured → localStorage-only mode
+  // Lock all action buttons immediately — unlock only after auth state resolves
+  document.body.classList.add('auth-locked');
   try {
     fbApp  = firebase.initializeApp(FIREBASE_CONFIG);
     fbAuth = firebase.auth();
@@ -2861,8 +2884,26 @@ function mobileAuthClick(){
   if(fbUser) signOutUser(); else signInGoogle();
 }
 
-// ── Update header button appearance ───────────────────────────────────
+// ── Update header button appearance + auth-gate lock ─────────────────
 function _updateAuthUI(user){
+  if(user){
+    // Signed in — unlock all buttons
+    document.body.classList.remove('auth-locked');
+  } else {
+    // Signed out — lock all buttons and wipe party state completely
+    document.body.classList.add('auth-locked');
+    // Clear party from localStorage so it never bleeds into a new session
+    try{
+      localStorage.removeItem('bg3chars');
+      localStorage.removeItem('bg3charInfo');
+      localStorage.removeItem('bg3prepared');
+    }catch(e){}
+    // Reset runtime party state and re-render with empty party
+    CHARS=[]; CHAR_INFO={}; CHC={};
+    var fresh=EMBEDDED_DATA;
+    fresh.chars=[]; fresh.charInfo={};
+    loadData(fresh);
+  }
   ['authBtn','authBtnM'].forEach(function(id){
     var btn=document.getElementById(id); if(!btn) return;
     if(user){

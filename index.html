@@ -3605,10 +3605,12 @@ function classChips(s){
   // if both "Wizard" and "Bladesinger" appear, drop "Bladesinger" since
   // "Wizard" (its parent) already covers it.
   var bareSet=new Set(tokens.map(function(x){return x.replace(/\s*\([^)]+\)/g,'').trim();}));
+  // If a subclass is listed, drop the parent class — the subclass is more specific.
+  var coveredParents=new Set();
+  bareSet.forEach(function(b){var p=S2C[b];if(p)coveredParents.add(p);});
   return tokens.filter(function(x){
     var bare=x.replace(/\s*\([^)]+\)/g,'').trim();
-    var parent=S2C[bare];
-    return !(parent&&bareSet.has(parent)); // drop subclass if parent is also listed
+    return !coveredParents.has(bare); // drop parent if any of its subclasses is listed
   }).map(function(x){
     var bare=x.replace(/\s*\([^)]+\)/g,'').trim();
     var bg=cCol(bare);var parent=S2C[bare];
@@ -3622,12 +3624,13 @@ function classChips(s){
 function raceChips(s){
   if(!s||!s.trim())return '<span class="nd">—</span>';
   var tokens=s.split(',').map(function(x){return x.trim();}).filter(Boolean);
-  // Drop any subrace token whose parent race is also listed in the same spell.
+  // If a subrace is listed, drop the parent race — the subrace is more specific.
   var bareSet=new Set(tokens.map(function(x){return x.replace(/\s*\([^)]+\)/g,'').replace(/\)+$/,'').trim();}));
+  var coveredParents=new Set();
+  bareSet.forEach(function(b){var p=S2R[b];if(p)coveredParents.add(p);});
   return tokens.filter(function(x){
     var bare=x.replace(/\s*\([^)]+\)/g,'').replace(/\)+$/,'').trim();
-    var parent=S2R[bare];
-    return !(parent&&bareSet.has(parent));
+    return !coveredParents.has(bare);
   }).map(function(x){
     var bare=x.replace(/\s*\([^)]+\)/g,'').replace(/\)+$/,'').trim();
     var bg=rCol(bare);var parent=S2R[bare];

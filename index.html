@@ -1095,6 +1095,9 @@ select, input[type=text], input[type=number] { max-width: 100%; box-sizing: bord
   .spell-detail-drawer { display: none !important; }
   .filter-drawer { display: none !important; }
   .bottom-nav { display: none !important; }
+  /* iOS Safari ignores body overflow:hidden — also clip the root to prevent
+     the page from scrolling and pushing the header action buttons off-screen */
+  html { overflow: hidden; height: 100%; }
 }
 
 /* Desktop responsive tightening */
@@ -2021,6 +2024,9 @@ function toggleFilters(){
   if(!body)return;
   var collapsed=body.classList.toggle('collapsed');
   if(btn)btn.textContent=collapsed?'▶ Filters':'▼ Filters';
+  // On iOS Safari, body overflow:hidden doesn't prevent page scroll.
+  // Scroll back to top so the header action buttons stay visible.
+  window.scrollTo(0,0);
 }
 // On mobile, start with filters collapsed
 (function(){
@@ -2533,7 +2539,7 @@ var EMBEDDED_DATA = (function(){
 {"name":"Disguise Self: Masc Tiefling","url":"https://bg3.wiki/wiki/Disguise_Self:_Masc_Tiefling","school":"Illusion","level":"Level 1","classes":"Cleric, Ranger, Bard (Lv 1), Sorcerer (Lv 1), Wizard (Lv 1), Trickery Domain (Lv 1), Draconic Bloodline (Gold/Fire Ancestry) (Lv 1), Arcane Trickster (Lv 3), Eldritch Knight (Lv 3), Gloom Stalker (Lv 3)","races":"","features":"Magic Initiate: Bard, Magic Initiate: Sorcerer, Magic Initiate: Wizard, Ritual Caster: Free Spells","items":"Mask of the Shapeshifter","scrolls":"Scroll of Disguise Self","used":0,"parent":"Disguise Self","cost":"Action","damage_types":[],"save":"","attack_roll":false,"concentration":false,"ritual":false,"conditions":[],"tags":["Utility","Illusion","Exploration"],"description":"Disguise Self: Masc Tiefling is a level 1 illusion spell. It is a variant of Disguise Self. This spell allows spellcasters to temporarily change their appearance to the form of a masculine Asmodeus tiefling.","range":"Self","wiki_icon":"https://bg3.wiki/wiki/Special:Filepath/Disguise_Self:_Masc_Tiefling_Unfaded_Icon.png"},
 {"name":"Dispel Evil And Good: Break Enchantment","url":"https://bg3.wiki/wiki/Dispel_Evil_And_Good:_Break_Enchantment","school":"Abjuration","level":"Level 5","classes":"Cleric (Lv 9)","races":"","features":"","items":"","scrolls":"","used":0,"parent":"Dispel Evil and Good","cost":"Action","damage_types":[],"save":"","attack_roll":false,"concentration":true,"ritual":false,"conditions":[],"tags":["Utility","Control"],"description":"Dispel Evil And Good: Break Enchantment is a level 5 abjuration spell. This is only available after casting Dispel Evil and Good on yourself. This spell allows spellcasters to break enchantments cast on allies from otherworldly creatures.","wiki_icon":"https://bg3.wiki/wiki/Special:Filepath/Dispel_Evil_And_Good:_Break_Enchantment_Unfaded_Icon.png"},
 {"name":"Dispel Evil and Good","url":"https://bg3.wiki/wiki/Dispel_Evil_and_Good","school":"Abjuration","level":"Level 5","classes":"Cleric (Lv 9), Paladin (Lv 9)","races":"","features":"","items":"","scrolls":"","used":0,"cost":"Action","damage_types":[],"save":"","attack_roll":false,"concentration":true,"ritual":false,"conditions":[],"tags":["Defensive","Control"],"description":"Dispel Evil And Good is a level 5 abjuration spell. It allows spellcasters to protect themselves from Evil and Good creatures, and allows them to break Enchantments on allies.","range":"Self","wiki_icon":"https://bg3.wiki/wiki/Special:Filepath/Dispel_Evil_and_Good_Unfaded_Icon.png"},
-{"name":"Dispel Magic","url":"https://bg3.wiki/wiki/Dispel_Magic","school":"Abjuration","level":"Level 3","classes":"Bard (Lv 5), Cleric (Lv 5), Druid (Lv 5), Paladin (Lv 5), Sorcerer (Lv 5), Warlock (Lv 5), Wizard (Lv 5)","races":"","features":"","items":"","scrolls":"Scroll of Dispel Magic","used":0,"cost":"Action","damage_types":[],"save":"","attack_roll":false,"concentration":false,"ritual":false,"conditions":[],"tags":["Utility","Control"],"description":"Dispel Magic is a level 3 abjuration spell. This spell allows spellcasters to dispel magic cast upon a character or object.","range":"36 m (120 ft)","wiki_icon":"https://bg3.wiki/wiki/Special:Filepath/Dispel_Magic_Unfaded_Icon.png"},
+{"name":"Dispel Magic","url":"https://bg3.wiki/wiki/Dispel_Magic","school":"Abjuration","level":"Level 3","classes":"Bard (Lv 5), Cleric (Lv 5), Druid (Lv 5), Paladin (Lv 9), Sorcerer (Lv 5), Warlock (Lv 5), Wizard (Lv 5), Eldritch Knight (Lv 13)","races":"","features":"","items":"","scrolls":"Scroll of Dispel Magic","used":0,"cost":"Action","damage_types":[],"save":"INT","attack_roll":false,"concentration":false,"ritual":false,"conditions":[],"tags":["Utility","Control"],"description":"Dispel Magic is a level 3 abjuration spell. This spell allows spellcasters to dispel magic cast upon a character or object.","range":"36 m (120 ft)","wiki_icon":"https://bg3.wiki/wiki/Special:Filepath/Dispel_Magic_Unfaded_Icon.png"},
 {"name":"Draconic Elemental Weapon: Acid","url":"https://bg3.wiki/wiki/Draconic_Elemental_Weapon:_Acid","school":"Transmutation","level":"Level 3","classes":"","races":"","features":"","items":"Drakethroat Glaive","scrolls":"","used":0,"parent":"Draconic Elemental Weapon","cost":"Bonus Action","damage_types":["Acid"],"save":"","attack_roll":false,"concentration":true,"ritual":false,"conditions":[],"tags":["Buff","Damage"],"description":"Draconic Elemental Weapon: Acid is a level 3 transmutation spell. This spell is a variant of Draconic Elemental Weapon and imbues a weapon with corrosive might, granting it bonus Acid damage and a +1 to attack rolls.","wiki_icon":"https://bg3.wiki/wiki/Special:Filepath/Draconic_Elemental_Weapon:_Acid_Unfaded_Icon.png"},
 {"name":"Draconic Elemental Weapon: Cold","url":"https://bg3.wiki/wiki/Draconic_Elemental_Weapon:_Cold","school":"Transmutation","level":"Level 3","classes":"","races":"","features":"","items":"Drakethroat Glaive","scrolls":"","used":0,"parent":"Draconic Elemental Weapon","cost":"Bonus Action","damage_types":["Cold"],"save":"","attack_roll":false,"concentration":true,"ritual":false,"conditions":[],"tags":["Buff","Damage"],"description":"Draconic Elemental Weapon: Cold is a level 3 transmutation spell. This spell is a variant of Draconic Elemental Weapon and imbues a weapon with icy might, granting it bonus Cold damage and a +1 bonus to attack rolls.","wiki_icon":"https://bg3.wiki/wiki/Special:Filepath/Draconic_Elemental_Weapon:_Cold_Unfaded_Icon.png"},
 {"name":"Draconic Elemental Weapon: Fire","url":"https://bg3.wiki/wiki/Draconic_Elemental_Weapon:_Fire","school":"Transmutation","level":"Level 3","classes":"","races":"","features":"","items":"Drakethroat Glaive","scrolls":"","used":0,"parent":"Draconic Elemental Weapon","cost":"Bonus Action","damage_types":["Fire"],"save":"","attack_roll":false,"concentration":true,"ritual":false,"conditions":[],"tags":["Buff","Damage"],"description":"Draconic Elemental Weapon: Fire is a level 3 transmutation spell. This spell is a variant of Draconic Elemental Weapon and imbues a weapon with icy might, granting it bonus Fire damage and a +1 bonus to attack rolls.","wiki_icon":"https://bg3.wiki/wiki/Special:Filepath/Draconic_Elemental_Weapon:_Fire_Unfaded_Icon.png"},
@@ -3364,11 +3370,12 @@ function _bareT(s) {
 // Returns true if the spell is on any of the character's class/subclass lists
 // at a level they can currently access. Does NOT check race or feat/item grants.
 //
-// Subclass-gating: if a spell's class list includes any subclass tokens that
-// belong to the character's base class (via S2C), those tokens act as an
-// allow-list — the character must possess one of those specific subclasses.
-// This prevents, e.g., a Tempest Domain Cleric from matching a Life Domain
-// spell that lists both "Cleric" and "Life Domain" in its classes field.
+// Returns true if the spell is on any of the character's class/subclass lists
+// at a level they can currently access. Does NOT check race or feat/item grants.
+// Both the base-class and subclass paths are level-gated via spellMinLvl().
+// Subclass entries in the spell data are additive (earlier access), not
+// exclusive — if a spell lists "Cleric (Lv 5)" ANY Cleric at level 5 matches,
+// even if the spell also lists a specific domain subclass at a lower level.
 function charCanHaveClass(sp, charName) {
   var info = CHAR_INFO[charName];
   if (!info) return false;
@@ -3379,18 +3386,10 @@ function charCanHaveClass(sp, charName) {
   for (var i = 0; i < classes.length; i++) {
     var cls = classes[i].cls || '', sub = classes[i].sub || '', lv = classes[i].lvl || 1;
     if (!cls) continue;
-    // Direct subclass match (e.g. spell lists "Life Domain" and char IS Life Domain)
+    // Subclass match — e.g. spell lists "Life Domain (Lv 3)" and char IS Life Domain
     if (sub && spCls.has(sub) && lv >= spellMinLvl(sp.classes, sub)) return true;
-    // Base class match — but check whether the spell is subclass-gated for this class
-    if (spCls.has(cls) && lv >= spellMinLvl(sp.classes, cls)) {
-      // Collect every subclass of cls that appears in the spell's class token list
-      var subsInSpell = [];
-      spCls.forEach(function(t) { if (S2C[t] === cls) subsInSpell.push(t); });
-      // No subclass tokens → spell is available to ALL members of this class
-      if (!subsInSpell.length) return true;
-      // Subclass tokens present → character's subclass must be one of them
-      if (sub && subsInSpell.indexOf(sub) > -1) return true;
-    }
+    // Base class match — available to any member of this class at the listed level
+    if (spCls.has(cls) && lv >= spellMinLvl(sp.classes, cls)) return true;
   }
   return false;
 }
@@ -4186,6 +4185,8 @@ function doFilter(){
         var kn=KNOWN[c]||{};
         var isKnown=(kn.cantrips||[]).indexOf(sp.name)>=0||(kn.spells||[]).indexOf(sp.name)>=0;
         if(isKnown)return; // already known — skip
+        // Level gate: hide spells above the character's current max spell-slot level
+        if(sp.level!=='Cantrip'&&(LO[sp.level]||0)>getMaxSlotLevel(c))return;
         if(charCanHaveClassRace(sp,c))ok3=true;
       });
       if(!ok3)return false;
@@ -4496,7 +4497,7 @@ function renderPrepCharTabs(){
     var bgCol=active?CHC[c]+'28':'transparent';
     var txtCol=active?cc:'var(--text2)';
     return '<button onclick="selectPrepChar(\''+esc(c)+'\')" style="padding:5px 14px;font-size:11px;font-family:Cinzel,serif;border-radius:4px;cursor:pointer;border:2px solid '+borderCol+';background:'+bgCol+';color:'+txtCol+';">'
-      +c+'<span style="font-size:9px;margin-left:6px;color:'+cc+';font-weight:'+(over?700:400)+'">'+badge+(over?' ✦':'')+'</span>'
+      +c+'<span style="font-size:9px;margin-left:6px;color:'+cc+'">'+badge+'</span>'
       +'</button>';
   }).join('');
   document.getElementById('prepCharTabs').innerHTML=html;

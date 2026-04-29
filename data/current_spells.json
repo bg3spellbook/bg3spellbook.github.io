@@ -3642,7 +3642,7 @@
     "url": "https://bg3.wiki/wiki/Hordestrike",
     "school": "Evocation",
     "level": "Level 4",
-    "features": "Legendary Action: Hordestrike, Honour mode, Spells, Level 4 Spells, Evocation spells, Dexterity saving throws, Actions, Sources of Force damage, Reactions, Legendary actions",
+    "features": "",
     "used": 0,
     "cost": "Action",
     "damage_types": [
@@ -6910,7 +6910,7 @@
     "url": "https://bg3.wiki/wiki/Beguiling_Rebuke",
     "school": "Enchantment",
     "level": "Level 6",
-    "features": "Legendary Action: Beguiling Rebuke, Honour mode, Spells, Level 6 Spells, Enchantment spells, Wisdom saving throws, Reactions, Legendary actions",
+    "features": "",
     "used": 0,
     "cost": "Reaction",
     "damage_types": [],
@@ -6973,7 +6973,7 @@
     "url": "https://bg3.wiki/wiki/Heartwrench",
     "school": "Illusion",
     "level": "Level 4",
-    "features": "Legendary Action: Heartwrench, Honour mode, Spells, Level 4 Spells, Illusion spells, Wisdom saving throws, Sources of Psychic damage, Reactions, Legendary actions",
+    "features": "",
     "used": 0,
     "cost": "Reaction",
     "damage_types": [
@@ -7039,7 +7039,7 @@
     "url": "https://bg3.wiki/wiki/Soul_Ascension",
     "school": "Evocation",
     "level": "Level 6",
-    "features": "Legendary Action: Soul Ascension, Honour mode, Spells, Level 6 Spells, Evocation spells, Dexterity saving throws, Sources of Necrotic damage, Reactions, Legendary actions",
+    "features": "",
     "used": 0,
     "cost": "Action",
     "damage_types": [

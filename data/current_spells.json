@@ -3642,7 +3642,7 @@
     "url": "https://bg3.wiki/wiki/Hordestrike",
     "school": "Evocation",
     "level": "Level 4",
-    "features": "",
+    "features": "Legendary Action: Hordestrike",
     "used": 0,
     "cost": "Action",
     "damage_types": [
@@ -6910,7 +6910,7 @@
     "url": "https://bg3.wiki/wiki/Beguiling_Rebuke",
     "school": "Enchantment",
     "level": "Level 6",
-    "features": "",
+    "features": "Legendary Action: Beguiling Rebuke",
     "used": 0,
     "cost": "Reaction",
     "damage_types": [],
@@ -6973,7 +6973,7 @@
     "url": "https://bg3.wiki/wiki/Heartwrench",
     "school": "Illusion",
     "level": "Level 4",
-    "features": "",
+    "features": "Legendary Action: Heartwrench",
     "used": 0,
     "cost": "Reaction",
     "damage_types": [
@@ -7039,7 +7039,7 @@
     "url": "https://bg3.wiki/wiki/Soul_Ascension",
     "school": "Evocation",
     "level": "Level 6",
-    "features": "",
+    "features": "Legendary Action: Soul Ascension",
     "used": 0,
     "cost": "Action",
     "damage_types": [

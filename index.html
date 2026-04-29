@@ -4330,8 +4330,8 @@ function saveNote(name,val){
 // The Prepare modal lets the user mark spells as prepared (✅) per party member.
 //   _prepChar            — currently selected character tab in the modal
 //   openPrepModal()      — opens the modal; defaults to first party member
-//   cancelPrepModal()    — reverts all changes since open, then closes
-//   savePrepModal()      — commits current state (already live) and closes
+//   cancelPrepModal()    — reverts to snapshot (no save, no sync), closes instantly
+//   savePrepModal()      — persists, re-renders table, notifies change count, closes
 //   selectPrepChar(c)    — switches the active character tab
 //   renderPrepCharTabs() — rebuilds the character tab bar
 //   renderPrepSpells()   — renders the spell list for _prepChar, grouped by level
@@ -4353,7 +4353,7 @@ function _snapshotPrepared(){
     });
   });
 }
-// Restores the snapshot taken at modal-open time, persists, and closes.
+// Restores the snapshot taken at modal-open time and closes — no save, no sync.
 function cancelPrepModal(){
   if(_prepSnapshot!==null){
     all.forEach(function(sp){
@@ -4361,27 +4361,40 @@ function cancelPrepModal(){
         sp[c]=(_prepSnapshot[sp.name]&&_prepSnapshot[sp.name][c])||'';
       });
     });
-    savePrepared();
-    doFilter();
   }
   _prepSnapshot=null;
   document.getElementById('prepModal').classList.remove('open');
 }
-// Commits the current prepared state (already persisted live) and closes.
+// Persists the current prepared state, updates the table, notifies how many changed, closes.
 function savePrepModal(){
+  // Count changes vs snapshot for the notification
+  var added=0, removed=0;
+  if(_prepSnapshot!==null){
+    all.forEach(function(sp){
+      CHARS.forEach(function(c){
+        var wasPrep=!!(_prepSnapshot[sp.name]&&_prepSnapshot[sp.name][c]);
+        var isPrep=sp[c]==='✅';
+        if(isPrep&&!wasPrep)added++;
+        if(!isPrep&&wasPrep)removed++;
+      });
+    });
+  }
   _prepSnapshot=null;
-  document.getElementById('prepModal').classList.remove('open');
-}
-function clearAllPrepared(){
-  var count=0;
-  all.forEach(function(sp){
-    CHARS.forEach(function(c){if(sp[c]==='✅'){sp[c]='';count++;}});
-  });
   savePrepared();
+  doFilter();
+  document.getElementById('prepModal').classList.remove('open');
+  var parts=[];
+  if(added)parts.push('+'+added+' prepared');
+  if(removed)parts.push('-'+removed+' unprepared');
+  notify(parts.length?'✓ Spells saved — '+parts.join(', '):'✓ No changes');
+}
+// Clears all prepared marks in memory only — deferred until Save Spells is clicked.
+function clearAllPrepared(){
+  all.forEach(function(sp){
+    CHARS.forEach(function(c){if(sp[c]==='✅')sp[c]='';});
+  });
   renderPrepCharTabs();
   renderPrepSpells();
-  doFilter();
-  notify(count?'Cleared '+count+' prepared spell'+(count===1?'':'s'):'No prepared spells to clear');
 }
 function openPrepModal(){
   if(!CHARS.length){notify('Add party members first (👥 Party)');return;}
@@ -4514,10 +4527,10 @@ function setPrepared(spellName,checked,el){
   // (isVariant() guard) to avoid inflating the prepared count.
   var variants=variantsByParent[spellName];
   if(variants)variants.forEach(function(v){v[_prepChar]=checked?'✅':'';});
-  savePrepared();
+  // Save + table re-render are deferred to savePrepModal() / cancelPrepModal().
+  // Only update the modal's own UI here.
   renderPrepCharTabs();
   renderPrepSpells();
-  doFilter();
 }
 
 // Builds the "Party" section shown inside the spell detail popup.

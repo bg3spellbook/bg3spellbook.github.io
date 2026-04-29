@@ -3926,21 +3926,18 @@ function buildFilterDropdowns(){
     Object.keys(S2R).forEach(function(s){if(S2R[s]===race)n+=raceDirect[s]||0;});
     return n;
   }
-  // Build class ms-wrap (desktop) and mobile select
+  // Build class ms-wrap (desktop) and mobile select.
+  // Only main classes are listed — selecting a class matches all its subclasses too
+  // (handled in doFilter via S2C lookup).
   var baseClasses=Object.keys(CC).filter(function(k){return !S2C[k];}).sort();
   var clsItems=[];
   var clsMOpts='<option value="">All Classes</option>';
   baseClasses.forEach(function(cls){
-    var subs=Object.keys(S2C).filter(function(k){return S2C[k]===cls;}).sort();
     var cnt=baseClsCount(cls);
-    if(cnt>0){clsItems.push({v:cls,l:cls});}
-    clsMOpts+='<optgroup label="'+cls+'"><option value="'+cls+'"'+(cnt===0?' disabled':'')+'>'+cls+'</option>';
-    subs.forEach(function(sub){
-      var sc=clsDirect[sub]||0;
-      if(sc>0)clsItems.push({v:sub,l:'└ '+sub});
-      clsMOpts+='<option value="'+sub+'"'+(sc===0?' disabled':'')+'>└ '+sub+'</option>';
-    });
-    clsMOpts+='</optgroup>';
+    if(cnt>0){
+      clsItems.push({v:cls,l:cls});
+      clsMOpts+='<option value="'+cls+'">'+cls+'</option>';
+    }
   });
   buildMsWrapDynamic('clsWrap','aCls',clsItems);
   buildMsMobile('clsM',aCls,'aCls',clsItems);

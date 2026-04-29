@@ -4420,13 +4420,13 @@ function renderPrepCharTabs(){
     var prepCnt=getPreparableSpells(c).filter(function(s){return s[c]==='✅';}).length;
     var limit=charPrepLimit(c);
     var over=limit!==null&&prepCnt>limit;
-    var cc=over?'#e07870':(CHC[c]||'#888');
+    var cc=CHC[c]||'#888';
     var badge=limit!==null?(prepCnt+'/'+limit):prepCnt;
-    var borderCol=active?(over?'#e07870':CHC[c]):(over?'#e0787055':CHC[c]+'77');
-    var bgCol=active?(over?'rgba(224,120,112,.15)':CHC[c]+'28'):'transparent';
+    var borderCol=active?CHC[c]:CHC[c]+'77';
+    var bgCol=active?CHC[c]+'28':'transparent';
     var txtCol=active?cc:'var(--text2)';
     return '<button onclick="selectPrepChar(\''+esc(c)+'\')" style="padding:5px 14px;font-size:11px;font-family:Cinzel,serif;border-radius:4px;cursor:pointer;border:2px solid '+borderCol+';background:'+bgCol+';color:'+txtCol+';">'
-      +c+'<span style="font-size:9px;margin-left:6px;color:'+cc+';font-weight:'+(over?700:400)+'">'+badge+'</span>'
+      +c+'<span style="font-size:9px;margin-left:6px;color:'+cc+';font-weight:'+(over?700:400)+'">'+badge+(over?' ✦':'')+'</span>'
       +'</button>';
   }).join('');
   document.getElementById('prepCharTabs').innerHTML=html;
@@ -4471,10 +4471,10 @@ function renderPrepSpells(){
   if(limit!==null){
     var over=prepCnt>limit;
     var pct=Math.min(100,limit>0?Math.round(prepCnt/limit*100):0);
-    var barClr=over?'#e07870':(CHC[_prepChar]||'#888');
+    var barClr=CHC[_prepChar]||'#888';
     html+='<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;background:var(--bg3);margin-bottom:12px">'
       +'<div style="flex:1">'
-        +'<div style="font-size:9px;font-family:Cinzel,serif;letter-spacing:1px;color:var(--text);margin-bottom:5px">PREPARED SPELLS</div>'
+        +'<div style="font-size:9px;font-family:Cinzel,serif;letter-spacing:1px;color:var(--text);margin-bottom:5px">PREPARED SPELLS'+(over?' — extra spells via feats/items':'')+'</div>'
         +'<div style="height:4px;border-radius:2px;background:var(--border)">'
           +'<div style="height:100%;width:'+pct+'%;background:'+barClr+';border-radius:2px;transition:width .2s"></div>'
         +'</div>'
@@ -4483,7 +4483,6 @@ function renderPrepSpells(){
         +'<span style="font-size:15px;font-weight:700">'+prepCnt+'</span>'
         +'<span style="font-size:10px;color:var(--text3)"> / '+limit+'</span>'
       +'</div>'
-      +(over?'<div style="font-size:9px;color:#e07870;font-family:Cinzel,serif">over limit</div>':'')
       +'</div>';
   }
   LEVEL_ORDER.forEach(function(lvl){
@@ -4517,7 +4516,7 @@ function setPrepared(spellName,checked,el){
     if(limit!==null){
       var cur=getPreparableSpells(_prepChar).filter(function(s){return s[_prepChar]==='✅';}).length;
       if(cur>=limit){
-        notify('⚠ '+_prepChar+' is over the base prep limit ('+limit+') — allowed via feats/items');
+        notify('ℹ '+_prepChar+' is above the base limit ('+limit+') — extra spells via feats/items are fine');
       }
     }
   }

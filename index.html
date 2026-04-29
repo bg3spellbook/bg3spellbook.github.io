@@ -1402,9 +1402,9 @@ td.cmp-cb-cell input { accent-color:var(--gold); cursor:pointer; width:13px; hei
 body.auth-locked .hdr-actions button:not(#authBtn),
 body.auth-locked .hdr-actions button:not(#authBtn) * { pointer-events: none !important; }
 body.auth-locked .hdr-actions button:not(#authBtn) { opacity: 0.3 !important; cursor: not-allowed !important; }
-/* Mobile: lock Party + Import nav buttons; keep Search, Filter, More accessible */
+/* Mobile: lock Party + Prepare nav buttons; keep Search, Filter, More accessible */
 body.auth-locked #bnavParty,
-body.auth-locked #bnavImport { opacity: 0.3 !important; pointer-events: none !important; cursor: not-allowed !important; }
+body.auth-locked #bnavPrepare { opacity: 0.3 !important; pointer-events: none !important; cursor: not-allowed !important; }
 /* Lock all More-menu buttons except sign-in */
 body.auth-locked #moreMenu .btn:not(#authBtnM) { opacity: 0.3 !important; pointer-events: none !important; }
 /* Desktop sign-in button pulses to draw attention */
@@ -1756,9 +1756,9 @@ body.auth-locked #authBtnM { background: rgba(201,168,76,.15) !important; border
     <span class="bnav-ico">👥</span>
     <span class="bnav-lbl">Party</span>
   </button>
-  <button class="bnav-btn" id="bnavImport" onclick="openImportModal()" title="Import">
-    <span class="bnav-ico">📂</span>
-    <span class="bnav-lbl">Import</span>
+  <button class="bnav-btn" id="bnavPrepare" onclick="openPrepModal()" title="Prepare Spells">
+    <span class="bnav-ico">📋</span>
+    <span class="bnav-lbl">Prepare</span>
   </button>
   <button class="bnav-btn" id="bnavMore" onclick="openMoreMenu()" title="More">
     <span class="bnav-ico">⋯</span>
@@ -1773,11 +1773,11 @@ body.auth-locked #authBtnM { background: rgba(201,168,76,.15) !important; border
     <h2 style="margin-bottom:12px">Actions</h2>
     <div style="display:flex;flex-direction:column;gap:8px">
       <button class="btn" id="authBtnM" onclick="mobileAuthClick()" title="Sign in with Google">🔐 Sign in</button>
+      <button class="btn" id="importBtnM" onclick="openImportModal();document.getElementById('moreMenu').classList.remove('open')">📂 Import</button>
       <button class="btn btn-gold" onclick="exportDataJSON();document.getElementById('moreMenu').classList.remove('open')">⬇ Export Data</button>
       <button class="btn btn-gold" onclick="exportAll();document.getElementById('moreMenu').classList.remove('open')">📋 Copy All Spells</button>
       <button class="btn btn-blue" onclick="exportFiltered();document.getElementById('moreMenu').classList.remove('open')">🖨 Export PDF</button>
       <button class="btn btn-blue" onclick="printCards();document.getElementById('moreMenu').classList.remove('open')">🃏 Print Cards</button>
-      <button class="btn" onclick="openPrepModal();document.getElementById('moreMenu').classList.remove('open')">📋 Prepare Spells</button>
       <button class="btn" onclick="toggleGap();document.getElementById('moreMenu').classList.remove('open')">⬡ Coverage Gaps</button>
       <button class="btn" id="varBtnMore" onclick="toggleVariants();document.getElementById('moreMenu').classList.remove('open')">⊕ Variants</button>
       <button class="btn btn-danger" onclick="clearAll();document.getElementById('moreMenu').classList.remove('open')">✕ Clear All Filters</button>

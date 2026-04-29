@@ -4036,6 +4036,13 @@ function doFilter(){
   var hasFilters  =CHARS.filter(function(c){return activeMode[c]==='has';});
   var knownFilters=CHARS.filter(function(c){return activeMode[c]==='known';});
   var canFilters  =CHARS.filter(function(c){return activeMode[c]==='can';});
+  // Precompute learnable spell sets per character (outside the per-spell loop for performance)
+  var canLearnSets={};
+  canFilters.forEach(function(c){
+    var s=new Set();
+    getLearnableSpells(c).forEach(function(e){s.add(e.spell.name);});
+    canLearnSets[c]=s;
+  });
   // Variants are never part of the sorted/filtered main list — they always render under their parent
   var baseSpells = all.filter(function(sp){ return !isVariant(sp); });
   var f=baseSpells.filter(function(sp){
@@ -4165,7 +4172,7 @@ function doFilter(){
         var kn=KNOWN[c]||{};
         var isKnown=(kn.cantrips||[]).indexOf(sp.name)>=0||(kn.spells||[]).indexOf(sp.name)>=0;
         if(isKnown)return; // already known — skip
-        if(charCanHave(sp,c)||charCanHaveRace(sp,c)||!!(sp.features||sp.items))ok3=true;
+        if(canLearnSets[c]&&canLearnSets[c].has(sp.name))ok3=true;
       });
       if(!ok3)return false;
     }
@@ -4551,17 +4558,7 @@ function renderPrepSpells(){
 function setPrepared(spellName,checked,el){
   var sp=allSpellsMap[spellName];
   if(!sp||!_prepChar)return;
-  // Soft warning when over the class prep limit — does NOT block preparation
-  // because feats and items can grant additional prepared spells beyond the class cap.
-  if(checked&&sp.level!=='Cantrip'){
-    var limit=charPrepLimit(_prepChar);
-    if(limit!==null){
-      var cur=getPreparableSpells(_prepChar).filter(function(s){return s[_prepChar]==='✅';}).length;
-      if(cur>=limit){
-        notify('⚠ '+_prepChar+' is over the preparation limit — '+(cur+1)+'/'+limit+' spells prepared');
-      }
-    }
-  }
+  // No over-limit warning — the tab counter already shows the count vs limit.
   sp[_prepChar]=checked?'✅':'';
   // Mirror the prepared state onto every variant (Tactician, Dryad, etc.) so
   // their table rows also light up. Variants are excluded from all count logic

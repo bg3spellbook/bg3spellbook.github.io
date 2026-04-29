@@ -3081,6 +3081,8 @@ function cCol(n){var b=n.replace(/\s*\(Lv \d+\)/,'').trim();var p=S2C[b];return 
 function rCol(n){var p=S2R[n];return RC[p||n]||hc(p||n);}
 function uCls(n){if(n<=0)return 'u0';if(n===1)return 'u1';if(n===2)return 'u2';return 'u3';}
 function esc(s){return s.replace(/\\/g,'\\\\').replace(/'/g,'\\x27');}
+// Shows a brief toast notification. Optional dur (ms) overrides the default 2800 ms.
+// Clears any pending hide-timer so rapid calls don't stack timeouts.
 function notify(msg,dur){var el=document.getElementById('notif');el.textContent=msg;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(function(){el.classList.remove('show');},dur||2800);}
 
 function spellMinLvl(spClasses,tokenBare){
@@ -3900,9 +3902,9 @@ function mirrorFilterDropdowns(){
 //
 // Character filter buttons cycle through four modes per character (activeMode[c]):
 //   'off'   — character ignored in filter (default; button dimmed)
-//   'has'   — prepared (✅) spells only
-//   'known' — known (in KNOWN[c]) but NOT prepared
-//   'can'   — accessible via class/race/feat/item but NOT known and NOT prepared
+//   'has'   — only spells the character has prepared (sp[c] === '✅')
+//   'known' — only spells in KNOWN[c] that are NOT prepared
+//   'can'   — only spells the character can learn via class/race that are NOT known and NOT prepared
 //
 // toggleChar(btn)           — cycles activeMode for one character and re-filters
 // updateFilterDot()         — shows/hides the "filters active" indicator dot
@@ -4371,15 +4373,15 @@ function saveNote(name,val){
 // ═══════════════════════════════════
 // The Prepare modal lets the user mark spells as prepared (✅) per party member.
 //   _prepChar            — currently selected character tab in the modal
-//   openPrepModal()      — opens the modal; defaults to first party member
-//   cancelPrepModal()    — reverts to snapshot (no save, no sync), closes instantly
-//   savePrepModal()      — persists, re-renders table, notifies change count, closes
+//   openPrepModal()      — snapshots state, opens modal; defaults to first character
+//   cancelPrepModal()    — restores snapshot (no I/O), closes instantly
+//   savePrepModal()      — persists to localStorage + Firestore, re-renders table, closes
 //   selectPrepChar(c)    — switches the active character tab
-//   renderPrepCharTabs() — rebuilds the character tab bar
+//   renderPrepCharTabs() — rebuilds the character tab strip with prepared/limit badges
 //   renderPrepSpells()   — renders the spell list for _prepChar, grouped by level
-//   togglePrep(name, c)  — sets/clears sp[c]="✅", persists via savePrepared()
-//   savePrepared()       — writes bg3prepared to localStorage
-//   clearAllPrepared()   — clears all ✅ for all characters
+//   setPrepared(name,checked) — toggles sp[c]='✅' in-memory; save deferred to savePrepModal()
+//   savePrepared()       — writes bg3prepared to localStorage (and Firestore if signed in)
+//   clearAllPrepared()   — clears all ✅ flags in-memory; deferred until Save Spells
 var _prepChar=null;
 var _prepSnapshot=null; // snapshot of prepared state taken when the modal opens
 
@@ -4551,7 +4553,6 @@ function renderPrepSpells(){
 function setPrepared(spellName,checked,el){
   var sp=allSpellsMap[spellName];
   if(!sp||!_prepChar)return;
-  // No over-limit warning — the tab counter already shows the count vs limit.
   sp[_prepChar]=checked?'✅':'';
   // Mirror the prepared state onto every variant (Tactician, Dryad, etc.) so
   // their table rows also light up. Variants are excluded from all count logic

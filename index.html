@@ -3070,6 +3070,9 @@ function loadPrepared(){
 function flags(sp){return{conc:!!(CONC[sp.name]||sp.concentration),ritual:!!(RITUAL[sp.name]||sp.ritual),react:!!(REACT[sp.name]||sp.cost==='Reaction'),bonus:!!(BONUS[sp.name]||sp.cost==='Bonus Action'),saves:SAVE_MAP[sp.name]?[SAVE_MAP[sp.name]]:(sp.save?[sp.save]:[])};}
 function hc(s){var p=['#E53935','#D81B60','#8E24AA','#5E35B1','#3949AB','#1E88E5','#039BE5','#00ACC1','#00897B','#43A047','#7CB342','#F9A825','#FB8C00','#F4511E','#6D4C41','#546E7A'];var h=0;for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))&0xFFFFFF;return p[Math.abs(h)%p.length];}
 function il(h){var c=h.replace('#','');return(parseInt(c.substr(0,2),16)*299+parseInt(c.substr(2,2),16)*587+parseInt(c.substr(4,2),16)*114)/1000>145;}
+// Darkens a hex color by ~55% — used to make pastel CHP colors readable as
+// text on light backgrounds. Returns a 6-digit hex string.
+function darkOf(h){var c=h.replace('#','');var r=Math.round(parseInt(c.substr(0,2),16)*0.45);var g=Math.round(parseInt(c.substr(2,2),16)*0.45);var b=Math.round(parseInt(c.substr(4,2),16)*0.45);return'#'+(r<16?'0':'')+r.toString(16)+(g<16?'0':'')+g.toString(16)+(b<16?'0':'')+b.toString(16);}
 
 function cUrl(n){var b=n.replace(/\s*\([^)]+\)/g,'').replace(/\)+$/,'').trim();return 'https://bg3.wiki/wiki/'+b.replace(/ /g,'_');}
 function wUrl(n){return 'https://bg3.wiki/wiki/'+n.replace(/ /g,'_');}
@@ -4296,12 +4299,19 @@ function spellRow(sp,i,isVar){
     var isKnown  = !hasPrepared && ((kn.cantrips||[]).indexOf(sp.name)>=0 || (kn.spells||[]).indexOf(sp.name)>=0);
     var canHave  = !hasPrepared && !isKnown && charCanHave(sp,c);
     var cc  = collChars.has(ci) ? 'ch-col' : '';
-    var bg  = hasPrepared ? CHC[c]+'28' : (isKnown||canHave) ? CHC[c]+'10' : 'transparent';
-    var bdr = hasPrepared ? CHC[c]+'66' : (isKnown||canHave) ? CHC[c]+'28' : 'transparent';
+    // In light mode the CHP pastels are too faint as foreground text; darken them.
+    var tc  = !dark && il(CHC[c]) ? darkOf(CHC[c]) : CHC[c];
+    // In light mode pastels also need stronger alpha for bg/border tints to show.
+    var bgA  = dark ? '28' : '55';
+    var bgA2 = dark ? '10' : '22';
+    var bdrA = dark ? '66' : 'aa';
+    var bdrA2= dark ? '28' : '55';
+    var bg  = hasPrepared ? CHC[c]+bgA  : (isKnown||canHave) ? CHC[c]+bgA2  : 'transparent';
+    var bdr = hasPrepared ? CHC[c]+bdrA : (isKnown||canHave) ? CHC[c]+bdrA2 : 'transparent';
     var content = hasPrepared
-      ? '<span style="font-size:13px;font-weight:900;color:'+CHC[c]+';text-shadow:0 0 8px '+CHC[c]+'88" title="'+c+' — prepared">✓</span>'
-      : isKnown  ? '<span style="font-size:11px;color:'+CHC[c]+'cc;line-height:1" title="'+c+' — known">◆</span>'
-      : canHave  ? '<span style="font-size:12px;color:'+CHC[c]+'44;line-height:1" title="'+c+' — can learn">·</span>' : '';
+      ? '<span style="font-size:13px;font-weight:900;color:'+tc+';text-shadow:0 0 8px '+tc+'88" title="'+c+' — prepared">✓</span>'
+      : isKnown  ? '<span style="font-size:11px;color:'+tc+'cc;line-height:1" title="'+c+' — known">◆</span>'
+      : canHave  ? '<span style="font-size:12px;color:'+tc+'88;line-height:1" title="'+c+' — can learn">·</span>' : '';
     ccs+='<td class="cc tdc'+ci+' '+cc+'" style="background:'+bg+';border-left:2px solid '+bdr+'">'+content+'</td>';
   });
   var inCmp=compareSet.has(sp.name);

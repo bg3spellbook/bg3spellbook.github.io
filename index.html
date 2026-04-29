@@ -3404,18 +3404,13 @@ function charCanHaveClass(sp, charName) {
   for (var i = 0; i < classes.length; i++) {
     var cls = classes[i].cls || '', sub = classes[i].sub || '', lv = classes[i].lvl || 1;
     if (!cls) continue;
-    // Subclass match — e.g. spell lists "Life Domain (Lv 3)" and char IS Life Domain
+    // Subclass match — spell lists "Life Domain (Lv 3)" and char IS Life Domain.
+    // This handles spells that are only listed for specific subclasses (no base class token).
     if (sub && spCls.has(sub) && lv >= spellMinLvl(sp.classes, sub)) return true;
-    // Base class match — but only if the spell doesn't restrict to specific subclasses
-    // of this base class that the character doesn't have.
-    if (spCls.has(cls) && lv >= spellMinLvl(sp.classes, cls)) {
-      // Collect any subclass tokens in this spell that belong to the character's base class
-      var subsInSpell = [];
-      spCls.forEach(function(t) { if (S2C[t] === cls) subsInSpell.push(t); });
-      if (!subsInSpell.length) return true;               // no subclass restriction
-      if (sub && subsInSpell.indexOf(sub) > -1) return true; // char has the right subclass
-      // spell only available to specific subclasses, and char doesn't have one → no match
-    }
+    // Base class match — spell lists "Sorcerer (Lv 1)" → all Sorcerers at that level.
+    // Do NOT gate on subclasses here: if "Sorcerer" is listed, ALL Sorcerers qualify.
+    // Subclass-only spells are handled above (spCls won't have the base class token).
+    if (spCls.has(cls) && lv >= spellMinLvl(sp.classes, cls)) return true;
   }
   return false;
 }

@@ -4514,12 +4514,14 @@ function renderPrepCharTabs(){
     var limit=charPrepLimit(c);
     var over=limit!==null&&prepCnt>limit;
     var cc=CHC[c]||'#888';
+    // In light mode darken the pastel so it's readable on the parchment background.
+    var tc=!dark&&il(cc)?darkOf(cc):cc;
     var badge=limit!==null?(prepCnt+'/'+limit):prepCnt;
     var badgeLabel=over?('✦ '+badge):badge;
-    var badgeStyle=over?'font-size:9px;margin-left:6px;color:#c8a951;font-weight:700':'font-size:9px;margin-left:6px;color:'+cc;
-    var borderCol=active?CHC[c]:CHC[c]+'77';
-    var bgCol=active?CHC[c]+'28':'transparent';
-    var txtCol=active?cc:'var(--text2)';
+    var badgeStyle=over?'font-size:9px;margin-left:6px;color:#c8a951;font-weight:700':'font-size:9px;margin-left:6px;color:'+tc;
+    var borderCol=active?tc:tc+'77';
+    var bgCol=active?tc+'28':'transparent';
+    var txtCol=active?tc:'var(--text2)';
     return '<button onclick="selectPrepChar(\''+esc(c)+'\')" style="padding:5px 14px;font-size:11px;font-family:Cinzel,serif;border-radius:4px;cursor:pointer;border:2px solid '+borderCol+';background:'+bgCol+';color:'+txtCol+';">'
       +c+'<span style="'+badgeStyle+'">'+badgeLabel+'</span>'
       +'</button>';
@@ -5121,6 +5123,7 @@ function buildKnownSectionHTML(items, known, limitN, type) {
   var badge    = hasLimit ? classChk + '/' + limitN : '' + classChk;
   var over     = hasLimit && classChk > limitN;
   var badgeClr = over ? '#c8a951' : 'var(--gold)';
+  if (over) badge = '✦ ' + badge;
   var label    = type === 'c' ? 'Cantrips' : 'Spells Known';
 
   // Single checkbox row for any spell entry
@@ -5199,8 +5202,10 @@ function pmKnownUpdateBadge(chk) {
   var classChk = sec.querySelectorAll('input[type=checkbox][data-tier="class"]:checked').length;
   var limStr   = badge.dataset.lim;
   var hasLimit = limStr !== '';
-  badge.textContent = hasLimit ? classChk + '/' + limStr : '' + classChk;
-  badge.style.color = (hasLimit && classChk > parseInt(limStr)) ? '#c8a951' : 'var(--gold)';
+  var isOver   = hasLimit && classChk > parseInt(limStr);
+  var txt      = hasLimit ? classChk + '/' + limStr : '' + classChk;
+  badge.textContent = isOver ? '✦ ' + txt : txt;
+  badge.style.color = isOver ? '#c8a951' : 'var(--gold)';
 }
 
 // Builds the HTML for one party-member card.

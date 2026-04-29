@@ -3360,6 +3360,12 @@ function _bareT(s) {
 
 // Returns true if the spell is on any of the character's class/subclass lists
 // at a level they can currently access. Does NOT check race or feat/item grants.
+//
+// Subclass-gating: if a spell's class list includes any subclass tokens that
+// belong to the character's base class (via S2C), those tokens act as an
+// allow-list — the character must possess one of those specific subclasses.
+// This prevents, e.g., a Tempest Domain Cleric from matching a Life Domain
+// spell that lists both "Cleric" and "Life Domain" in its classes field.
 function charCanHaveClass(sp, charName) {
   var info = CHAR_INFO[charName];
   if (!info) return false;
@@ -3370,8 +3376,18 @@ function charCanHaveClass(sp, charName) {
   for (var i = 0; i < classes.length; i++) {
     var cls = classes[i].cls || '', sub = classes[i].sub || '', lv = classes[i].lvl || 1;
     if (!cls) continue;
-    if (spCls.has(cls) && lv >= spellMinLvl(sp.classes, cls)) return true;
+    // Direct subclass match (e.g. spell lists "Life Domain" and char IS Life Domain)
     if (sub && spCls.has(sub) && lv >= spellMinLvl(sp.classes, sub)) return true;
+    // Base class match — but check whether the spell is subclass-gated for this class
+    if (spCls.has(cls) && lv >= spellMinLvl(sp.classes, cls)) {
+      // Collect every subclass of cls that appears in the spell's class token list
+      var subsInSpell = [];
+      spCls.forEach(function(t) { if (S2C[t] === cls) subsInSpell.push(t); });
+      // No subclass tokens → spell is available to ALL members of this class
+      if (!subsInSpell.length) return true;
+      // Subclass tokens present → character's subclass must be one of them
+      if (sub && subsInSpell.indexOf(sub) > -1) return true;
+    }
   }
   return false;
 }
@@ -4216,7 +4232,7 @@ function cmp(a,b){
   if(sk==='name'){va=a.name;vb=b.name;}
   else if(sk==='school'){va=a.school||'';vb=b.school||'';}
   else if(sk==='level'){va=LO[a.level]||99;vb=LO[b.level]||99;}
-  else{va=a.used;vb=b.used;}
+  else{va=CHARS.filter(function(c){return a[c]==='✅';}).length;vb=CHARS.filter(function(c){return b[c]==='✅';}).length;}
   return typeof va==='string'
     ?(sd==='asc'?va.localeCompare(vb):vb.localeCompare(va))
     :(sd==='asc'?va-vb:vb-va);

@@ -4165,7 +4165,7 @@ function doFilter(){
         var kn=KNOWN[c]||{};
         var isKnown=(kn.cantrips||[]).indexOf(sp.name)>=0||(kn.spells||[]).indexOf(sp.name)>=0;
         if(isKnown)return; // already known — skip
-        if(charCanHave(sp,c))ok3=true;
+        if(charCanHaveClassRace(sp,c))ok3=true;
       });
       if(!ok3)return false;
     }

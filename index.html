@@ -4236,8 +4236,8 @@ function spellRow(sp,i,isVar){
     var isKnown  = !hasPrepared && ((kn.cantrips||[]).indexOf(sp.name)>=0 || (kn.spells||[]).indexOf(sp.name)>=0);
     var canHave  = !hasPrepared && !isKnown && charCanHave(sp,c);
     var cc  = collChars.has(ci) ? 'ch-col' : '';
-    var bg  = hasPrepared ? CHC[c]+'28' : 'transparent';
-    var bdr = hasPrepared ? CHC[c]+'66' : 'transparent';
+    var bg  = hasPrepared ? CHC[c]+'28' : (isKnown||canHave) ? CHC[c]+'10' : 'transparent';
+    var bdr = hasPrepared ? CHC[c]+'66' : (isKnown||canHave) ? CHC[c]+'28' : 'transparent';
     var content = hasPrepared
       ? '<span style="font-size:13px;font-weight:900;color:'+CHC[c]+';text-shadow:0 0 8px '+CHC[c]+'88" title="'+c+' — prepared">✓</span>'
       : isKnown  ? '<span style="font-size:11px;color:'+CHC[c]+'cc;line-height:1" title="'+c+' — known">◆</span>'

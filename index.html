@@ -3598,9 +3598,45 @@ var featIconMap={"Actions":"https://bg3.wiki/w/images/4/4d/Action_Surge_Icon.web
 //   chipIco(url)   — shared <img> wrapper for chip icons
 //
 // classChips: base class icon; subclasses fall back to parent via S2C
-function classChips(s){if(!s||!s.trim())return '<span class="nd">—</span>';return s.split(',').map(function(x){return x.trim();}).filter(Boolean).map(function(x){var bare=x.replace(/\s*\([^)]+\)/g,'').trim();var bg=cCol(bare);var parent=S2C[bare];var tip=parent?'Subclass of '+parent:'';var iurl=classIcons[bare]||(parent&&classIcons[parent])||'';var ico=iurl?chipIco(iurl):'';return '<a href="'+cUrl(bare)+'" target="_blank" onclick="event.stopPropagation()" class="chip" style="background:'+bg+';color:'+(il(bg)?'#1a1a1a':'#fff')+';text-decoration:none"'+(tip?' title="'+tip+'"':'')+'>'+ico+x+'</a>';}).join('');}
+function classChips(s){
+  if(!s||!s.trim())return '<span class="nd">—</span>';
+  var tokens=s.split(',').map(function(x){return x.trim();}).filter(Boolean);
+  // Build the set of bare class names present so we can deduplicate:
+  // if both "Wizard" and "Bladesinger" appear, drop "Bladesinger" since
+  // "Wizard" (its parent) already covers it.
+  var bareSet=new Set(tokens.map(function(x){return x.replace(/\s*\([^)]+\)/g,'').trim();}));
+  return tokens.filter(function(x){
+    var bare=x.replace(/\s*\([^)]+\)/g,'').trim();
+    var parent=S2C[bare];
+    return !(parent&&bareSet.has(parent)); // drop subclass if parent is also listed
+  }).map(function(x){
+    var bare=x.replace(/\s*\([^)]+\)/g,'').trim();
+    var bg=cCol(bare);var parent=S2C[bare];
+    var tip=parent?'Subclass of '+parent:'';
+    var iurl=classIcons[bare]||(parent&&classIcons[parent])||'';
+    var ico=iurl?chipIco(iurl):'';
+    return '<a href="'+cUrl(bare)+'" target="_blank" onclick="event.stopPropagation()" class="chip" style="background:'+bg+';color:'+(il(bg)?'#1a1a1a':'#fff')+';text-decoration:none"'+(tip?' title="'+tip+'"':'')+'>'+ico+x+'</a>';
+  }).join('');
+}
 // raceChips: base race icon; subraces fall back to parent via S2R
-function raceChips(s){if(!s||!s.trim())return '<span class="nd">—</span>';return s.split(',').map(function(x){return x.trim();}).filter(Boolean).map(function(x){var bare=x.replace(/\s*\([^)]+\)/g,'').replace(/\)+$/,'').trim();var bg=rCol(bare);var parent=S2R[bare];var tip=parent?'Subrace of '+parent:'';var iurl=raceIcons[bare]||(parent&&raceIcons[parent])||'';var ico=iurl?chipIco(iurl):'';return '<a href="'+wUrl(bare)+'" target="_blank" onclick="event.stopPropagation()" class="chip" style="background:'+bg+';color:'+(il(bg)?'#1a1a1a':'#fff')+';text-decoration:none"'+(tip?' title="'+tip+'"':'')+'>'+ico+x+'</a>';}).join('');}
+function raceChips(s){
+  if(!s||!s.trim())return '<span class="nd">—</span>';
+  var tokens=s.split(',').map(function(x){return x.trim();}).filter(Boolean);
+  // Drop any subrace token whose parent race is also listed in the same spell.
+  var bareSet=new Set(tokens.map(function(x){return x.replace(/\s*\([^)]+\)/g,'').replace(/\)+$/,'').trim();}));
+  return tokens.filter(function(x){
+    var bare=x.replace(/\s*\([^)]+\)/g,'').replace(/\)+$/,'').trim();
+    var parent=S2R[bare];
+    return !(parent&&bareSet.has(parent));
+  }).map(function(x){
+    var bare=x.replace(/\s*\([^)]+\)/g,'').replace(/\)+$/,'').trim();
+    var bg=rCol(bare);var parent=S2R[bare];
+    var tip=parent?'Subrace of '+parent:'';
+    var iurl=raceIcons[bare]||(parent&&raceIcons[parent])||'';
+    var ico=iurl?chipIco(iurl):'';
+    return '<a href="'+wUrl(bare)+'" target="_blank" onclick="event.stopPropagation()" class="chip" style="background:'+bg+';color:'+(il(bg)?'#1a1a1a':'#fff')+';text-decoration:none"'+(tip?' title="'+tip+'"':'')+'>'+ico+x+'</a>';
+  }).join('');
+}
 // featChips: icon from fetched map, fallback to Special:Filepath
 function featChips(s){if(!s||!s.trim())return '<span class="nd">—</span>';return s.split(',').map(function(x){return x.trim();}).filter(Boolean).map(function(x){var bare=x.replace(/\s*\([^)]+\)/g,'').replace(/\)+$/,'').trim();var bg=hc(bare);var tip=S2C[bare]?'Subclass of '+S2C[bare]:'';var fic=(typeof featIconMap!=='undefined'&&featIconMap[bare])?chipIco(featIconMap[bare]):featIco(bare);return '<a href="'+wUrl(bare)+'" target="_blank" onclick="event.stopPropagation()" class="chip" style="background:'+bg+';color:'+(il(bg)?'#1a1a1a':'#fff')+';text-decoration:none"'+(tip?' title="'+tip+'"':'')+'>'+fic+x+'</a>';}).join('');}
 // scrollChips: icon from fetched map (actual scroll icon), fallback to spell icon
@@ -3927,17 +3963,23 @@ function buildFilterDropdowns(){
     return n;
   }
   // Build class ms-wrap (desktop) and mobile select.
-  // Only main classes are listed — selecting a class matches all its subclasses too
-  // (handled in doFilter via S2C lookup).
+  // Shows main classes + subclasses. Filtering by a main class matches all its
+  // subclasses too (doFilter S2C lookup). Filtering by a subclass matches only
+  // that subclass.
   var baseClasses=Object.keys(CC).filter(function(k){return !S2C[k];}).sort();
   var clsItems=[];
   var clsMOpts='<option value="">All Classes</option>';
   baseClasses.forEach(function(cls){
+    var subs=Object.keys(S2C).filter(function(k){return S2C[k]===cls;}).sort();
     var cnt=baseClsCount(cls);
-    if(cnt>0){
-      clsItems.push({v:cls,l:cls});
-      clsMOpts+='<option value="'+cls+'">'+cls+'</option>';
-    }
+    if(cnt>0){clsItems.push({v:cls,l:cls});}
+    clsMOpts+='<optgroup label="'+cls+'"><option value="'+cls+'"'+(cnt===0?' disabled':'')+'>'+cls+'</option>';
+    subs.forEach(function(sub){
+      var sc=clsDirect[sub]||0;
+      if(sc>0)clsItems.push({v:sub,l:'└ '+sub});
+      clsMOpts+='<option value="'+sub+'"'+(sc===0?' disabled':'')+'>└ '+sub+'</option>';
+    });
+    clsMOpts+='</optgroup>';
   });
   buildMsWrapDynamic('clsWrap','aCls',clsItems);
   buildMsMobile('clsM',aCls,'aCls',clsItems);

@@ -3081,7 +3081,7 @@ function cCol(n){var b=n.replace(/\s*\(Lv \d+\)/,'').trim();var p=S2C[b];return 
 function rCol(n){var p=S2R[n];return RC[p||n]||hc(p||n);}
 function uCls(n){if(n<=0)return 'u0';if(n===1)return 'u1';if(n===2)return 'u2';return 'u3';}
 function esc(s){return s.replace(/\\/g,'\\\\').replace(/'/g,'\\x27');}
-function notify(msg){var el=document.getElementById('notif');el.textContent=msg;el.classList.add('show');setTimeout(function(){el.classList.remove('show');},2200);}
+function notify(msg,dur){var el=document.getElementById('notif');el.textContent=msg;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(function(){el.classList.remove('show');},dur||2800);}
 
 function spellMinLvl(spClasses,tokenBare){
   var found=1;
@@ -4558,7 +4558,7 @@ function setPrepared(spellName,checked,el){
     if(limit!==null){
       var cur=getPreparableSpells(_prepChar).filter(function(s){return s[_prepChar]==='✅';}).length;
       if(cur>=limit){
-        notify('ℹ '+_prepChar+' is above the base limit ('+limit+') — extra spells via feats/items are fine');
+        notify('⚠ '+_prepChar+' is over the preparation limit — '+(cur+1)+'/'+limit+' spells prepared');
       }
     }
   }

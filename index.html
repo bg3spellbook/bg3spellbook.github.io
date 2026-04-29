@@ -4240,7 +4240,7 @@ function spellRow(sp,i,isVar){
   h+='<td class="cmp-cb-cell" onclick="event.stopPropagation()"><input type="checkbox" class="cmp-cb" '+(inCmp?'checked':'')+' onchange="toggleCompare(\''+esc(sp.name)+'\',this)" title="Add to comparison"></td>';
   h+='<td>'+ico(sp)+'</td>';
   h+='<td><div class="snw">';
-  h+='<a class="sname" href="'+(sp.url||spellWikiUrl(sp.name))+'" target="_blank" onclick="event.stopPropagation()" title="'+sp.name+'">'+sp.name+'</a>';
+  h+='<a class="sname" href="'+(sp.url||spellWikiUrl(sp.name))+'" target="_blank" title="'+sp.name+'">'+sp.name+'</a>';
   if(cnt>=2)h+='<span class="ovlap" data-tip="'+cnt+' chars know this">×'+cnt+'</span>';
   if(!isVar)h+='<span class="sf sf-pin" onclick="event.stopPropagation();togglePin(\''+esc(sp.name)+'\')" data-tip="'+(isPinned?'Unpin':'Pin')+'">'+pinLbl+'</span>';
   h+='</div><div class="slvl">'+sp.level+'</div><div class="spell-flags">'+bgs+'</div></td>';
@@ -5659,7 +5659,7 @@ function cardHtml(sp, idx) {
     + '<div class="sc-top">'
     + icoHtml
     + '<div class="sc-info">'
-    + '<a class="sc-name" href="'+(sp.url||spellWikiUrl(sp.name))+'" target="_blank" onclick="event.stopPropagation()" title="'+sp.name+'">'+sp.name+'</a>'
+    + '<a class="sc-name" href="'+(sp.url||spellWikiUrl(sp.name))+'" target="_blank" title="'+sp.name+'">'+sp.name+'</a>'
     + '<div class="sc-meta">'
     + '<span class="sc-school-tag" style="color:'+sbg+'">'+(sp.school||'—')+'</span>'
     + '<span class="sc-dot-sep">·</span>'

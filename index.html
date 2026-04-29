@@ -645,11 +645,19 @@ input[type=text]#q { font-size: 13px; padding: 7px 12px; border-radius: var(--ra
   border: 2px solid rgba(255,255,255,.2);
   box-shadow: 0 2px 8px rgba(0,0,0,.5);
 }
-/* · Character CAN LEARN the spell — faint tinted badge */
+/* ◆ Character KNOWS the spell (not prepared) — dotted border, tinted fill */
+.sc-char-dot.known {
+  background: transparent !important;
+  border: 2px dotted;
+  opacity: .85;
+  color: inherit;
+  box-shadow: none;
+}
+/* · Character CAN LEARN the spell — dashed border, very faint */
 .sc-char-dot.can {
   background: transparent !important;
   border: 2px dashed;
-  opacity: .6;
+  opacity: .4;
   color: inherit;
   box-shadow: none;
   text-shadow: none;
@@ -4218,9 +4226,9 @@ function spellRow(sp,i,isVar){
   var pinLbl=isPinned?'★':'☆';
   var ccs='';
   // Per-character columns — three visual states:
-  //   ✓  (bright, solid border)  — spell is prepared (sp[c]==='✅')
-  //   ◦  (medium dot)            — spell is in the character's known list
-  //   ·  (faint dot)             — spell is accessible but not yet known/prepared
+  //   ✓  (bright checkmark)  — spell is prepared (sp[c]==='✅')
+  //   ◆  (filled diamond)    — spell is in the character's known list
+  //   ·  (faint dot)         — spell is accessible but not yet known/prepared
   CHARS.forEach(function(c,ci){
     var hasPrepared = sp[c]==='✅';
     var kn = KNOWN[c]||{};
@@ -4231,8 +4239,8 @@ function spellRow(sp,i,isVar){
     var bdr = hasPrepared ? CHC[c]+'66' : isKnown  ? CHC[c]+'44' : 'transparent';
     var content = hasPrepared
       ? '<span style="font-size:13px;font-weight:900;color:'+CHC[c]+';text-shadow:0 0 8px '+CHC[c]+'88" title="'+c+' — prepared">✓</span>'
-      : isKnown  ? '<span style="font-size:14px;color:'+CHC[c]+'bb;line-height:1" title="'+c+' — known">◦</span>'
-      : canHave  ? '<span style="font-size:12px;color:'+CHC[c]+'55;line-height:1" title="'+c+' — can learn">·</span>' : '';
+      : isKnown  ? '<span style="font-size:11px;color:'+CHC[c]+'cc;line-height:1" title="'+c+' — known">◆</span>'
+      : canHave  ? '<span style="font-size:12px;color:'+CHC[c]+'44;line-height:1" title="'+c+' — can learn">·</span>' : '';
     ccs+='<td class="cc tdc'+ci+' '+cc+'" style="background:'+bg+';border-left:2px solid '+bdr+'">'+content+'</td>';
   });
   var inCmp=compareSet.has(sp.name);
@@ -5626,7 +5634,13 @@ function renderCards() {
 function cardHtml(sp, idx) {
   var fg = flags(sp);
   var sbg = SC[sp.school] || '#606878';
-  var canChars = CHARS.filter(function(c){return !sp[c] && charCanHave(sp,c);});
+  var knownChars = CHARS.filter(function(c){
+    if(sp[c]==='✅') return false;
+    var kn=KNOWN[c]||{};
+    return (kn.cantrips||[]).indexOf(sp.name)>=0||(kn.spells||[]).indexOf(sp.name)>=0;
+  });
+  var knownSet = new Set(knownChars.map(function(c){return c;}));
+  var canChars = CHARS.filter(function(c){return !sp[c] && !knownSet.has(c) && charCanHave(sp,c);});
   var isPinned = pinned.has(sp.name);
   var hasNote = !!notes[sp.name];
   var icoHtml = '<img class="sc-ico" src="'+spIcoUrl(sp)+'" onerror="siFallback(this,\''+sp.name.replace(/'/g,"\\'")+'\')\" alt="" loading="lazy">';
@@ -5646,8 +5660,11 @@ function cardHtml(sp, idx) {
       charDots += '<span class="sc-char-dot" style="background:'+CHC[c]+';box-shadow:0 2px 8px '+CHC[c]+'55" title="'+c+' — prepared">'+c[0]+'</span>';
     }
   });
+  knownChars.forEach(function(c){
+    charDots += '<span class="sc-char-dot known" style="border-color:'+CHC[c]+';color:'+CHC[c]+'" title="'+c+' — known">'+c[0]+'</span>';
+  });
   canChars.forEach(function(c){
-    charDots += '<span class="sc-char-dot can" style="border-color:'+CHC[c]+'88;color:'+CHC[c]+'" title="'+c+' — known">'+c[0]+'</span>';
+    charDots += '<span class="sc-char-dot can" style="border-color:'+CHC[c]+'66;color:'+CHC[c]+'" title="'+c+' — can learn">'+c[0]+'</span>';
   });
 
   var used = sp.used||0;

@@ -241,3 +241,50 @@ The app is a **single static file** (`index.html`) with no build step and no ser
 - bg3.wiki CDN for icon images (loaded on demand, hidden on error)
 
 To deploy: serve `index.html` from any static host (Netlify, GitHub Pages, Vercel, S3+CloudFront, etc.). No environment variables, no backend.
+
+---
+
+## Recent Work & Current State
+
+### Class/subclass filter fixes (completed)
+The `charCanHave` and `charCanHaveClass` functions previously had two bugs:
+1. **Cross-subclass contamination** — Storm Sorcery seeing Draconic Bloodline spells because they share the Sorcerer base class.
+2. **Subclass level bypass** — Storm Sorcery Lv 1 matching "Storm Sorcery (Storm Spell) (Lv 6)" by falling through to the "Sorcerer (Lv 1)" base class path.
+
+Both fixed with a three-case matching rule applied consistently in both functions:
+- **Case A**: Spell lists the character's own subclass → subclass level gate is authoritative.
+- **Case B**: Character has no subclass → match via base class at base level.
+- **Case C**: Character has a subclass the spell doesn't list → only match via base class if the spell has NO other subclass of that same base class listed.
+
+`spellMinLvl()` was also fixed to use a depth-tracking loop so nested parens like `"Circle of the Land (Arctic (Lv 7), Forest) (Lv 3)"` return the outer level (3) not the inner one (7).
+
+### V/S/M spell components (completed)
+- Every spell object now has `verbal`, `somatic`, `material` boolean fields.
+- `fetch_wiki.py` scrapes `HasVerbalComponent` / `HasSomaticComponent` / `HasMaterialComponent` flags from bg3.wiki.
+- `patch_components.py` fills the ~55 spells whose wiki pages don't expose component flags (sub-actions, psionic abilities, creature abilities, physical strikes, known 5e spells).
+- **Components filter** (`aCmp`) added to both filter rows with options: Verbal, No Verbal (Silenced), Somatic, Material.
+- Spell detail popup shows a **Components** stat (V/S/M) with V highlighted gold and a tooltip noting it's blocked by Silence.
+- Notable: **Counterspell is S-only** (castable while Silenced).
+
+### Filter panel layout
+- Two rows of comboboxes (fr1: 8 cols, fr2: 8 cols) on desktop (≥1024px).
+- Row 1: Search, Level, Class, Race, Usage, Action, Save, Flags
+- Row 2: Source, Components, Damage, Condition, Tag, Range, Area, Recharge
+- Mobile: slide-out drawer mirrors all filters.
+
+---
+
+## Roadmap / Feature Ideas
+
+Features discussed but not yet built — pick these up in future sessions:
+
+| Priority | Feature | Notes |
+|---|---|---|
+| High | **Spell slot tracker** | Per character, track slots used per level; long/short rest reset button. Most obviously missing feature for actual play. |
+| High | **Upcast info** | Scrape upcast behaviour from bg3.wiki (e.g. Magic Missile +1 dart/slot); show in spell detail popup. |
+| Medium | **Warlock short-rest slots** | Warlocks regain Pact Magic on short rest. Party builder / slot tracker should distinguish Pact Magic slots from regular slots. |
+| Medium | **Shareable party URL** | Encode party config (chars, classes, levels) into a URL query string for easy sharing. |
+| Medium | **Wet condition filter/tag** | Wet enemies take ×2 Cold/Lightning and ½ Fire. Toggle on damage filter or tag. |
+| Low | **Concentration conflict warning** | In spell detail popup, warn if a character is already concentrating on something. |
+| Low | **Cantrip scaling note** | BG3 cantrips scale at character levels 5 and 10; show in popup stat row. |
+| Low | **Reset uses button** | One-click to zero all `used` counters (long rest reset). |

@@ -17,9 +17,9 @@
     "duration": "",
     "recharge": "",
     "icon": "",
-    "verbal": null,
-    "somatic": null,
-    "material": null
+    "verbal": false,
+    "somatic": false,
+    "material": false
   },
   "Blade Ward": {
     "description": "Blade Ward is a cantrip (Abjuration). It allows spellcasters to become more resilient against physical damage.",
@@ -50,9 +50,9 @@
     "duration": "",
     "recharge": "Per action",
     "icon": "",
-    "verbal": null,
-    "somatic": null,
-    "material": null
+    "verbal": true,
+    "somatic": false,
+    "material": false
   },
   "Bursting Sinew": {
     "description": "Bursting Sinew is a cantrip (Necromancy). It allows the caster to detonate a corpse into a small AoE of damage.",
@@ -523,9 +523,9 @@
     "duration": "",
     "recharge": "",
     "icon": "",
-    "verbal": null,
-    "somatic": null,
-    "material": null
+    "verbal": true,
+    "somatic": false,
+    "material": false
   },
   "Banishment": {
     "description": "Banishment is a level 4 abjuration spell. It allows spellcasters to temporarily send a target to another plane of existence.",
@@ -1656,9 +1656,9 @@
     "duration": "",
     "recharge": "Long rest",
     "icon": "",
-    "verbal": null,
-    "somatic": null,
-    "material": null
+    "verbal": true,
+    "somatic": true,
+    "material": false
   },
   "Globe of Invulnerability": {
     "description": "Globe of Invulnerability is a level 6 abjuration spell.",
@@ -2019,9 +2019,9 @@
     "duration": "",
     "recharge": "",
     "icon": "",
-    "verbal": null,
-    "somatic": null,
-    "material": null
+    "verbal": true,
+    "somatic": true,
+    "material": false
   },
   "Kereska's Favour": {
     "description": "Kereska&#039;s Favour is a level 4 evocation spell. Granted by Markoheshkir, it allows its caster to imbue themselves with an element and unlock resistances and spells associated with it.",
@@ -2239,9 +2239,9 @@
     "duration": "",
     "recharge": "",
     "icon": "",
-    "verbal": null,
-    "somatic": null,
-    "material": null
+    "verbal": false,
+    "somatic": false,
+    "material": false
   },
   "Murderous Cloud of Daggers": {
     "description": "Murderous Cloud of Daggers is a level 2 conjuration spell. This spell is a unique variant of Cloud of Daggers used by Invokers of Bhaal. It allows spellcasters to conjure a barrage of daggers in an area that deals piercing damage to any creature entering or starting its turn in the area. It cannot be learned by party members.",
@@ -2283,9 +2283,9 @@
     "duration": "",
     "recharge": "",
     "icon": "",
-    "verbal": null,
-    "somatic": null,
-    "material": null
+    "verbal": true,
+    "somatic": true,
+    "material": false
   },
   "Otiluke's Resilient Sphere": {
     "description": "Otiluke&#039;s Resilient Sphere is a level 4 evocation spell. It surrounds a target in an impenetrable protective sphere which blocks everything from coming in or out of the sphere. The encased creature is rendered completely invulnerable to outside attacks or spells, but conversely is blocked from attacking or targeting anything outside the sphere.",
@@ -3097,9 +3097,9 @@
     "duration": "",
     "recharge": "",
     "icon": "",
-    "verbal": null,
-    "somatic": null,
-    "material": null
+    "verbal": true,
+    "somatic": true,
+    "material": false
   },
   "Bludgeon the Weak": {
     "description": "Bludgeon the Weak is a level 1 transmutation spell. This spell is a variant of Brand the Weak that imposes vulnerability on an enemy to ⁠Bludgeoning damage.",
@@ -3108,9 +3108,9 @@
     "duration": "",
     "recharge": "Long rest",
     "icon": "",
-    "verbal": null,
-    "somatic": null,
-    "material": null
+    "verbal": false,
+    "somatic": true,
+    "material": false
   },
   "Brand the Weak": {
     "description": "Brand the Weak is a level 1 transmutation spell. It imposes vulnerability on an enemy to ⁠Bludgeoning, ⁠Slashing, or ⁠Piercing damage.",
@@ -3119,9 +3119,9 @@
     "duration": "",
     "recharge": "Long rest",
     "icon": "",
-    "verbal": null,
-    "somatic": null,
-    "material": null
+    "verbal": true,
+    "somatic": true,
+    "material": false
   },
   "Burning Age": {
     "description": "Burning Age is a level 3 transmutation spell. This spell is a variant of Elemental Age and embodies your Main hand weapon with burning age, granting it bonus Fire damage and a +1 Enchantment.",
@@ -3185,9 +3185,9 @@
     "duration": "",
     "recharge": "Per turn",
     "icon": "",
-    "verbal": null,
-    "somatic": null,
-    "material": null
+    "verbal": true,
+    "somatic": true,
+    "material": false
   },
   "Divine Favour": {
     "description": "Divine Favour is a level 1 evocation spell. It allows spellcasters to empower their Weapons to deal extra Radiant damage.",
@@ -3361,9 +3361,9 @@
     "duration": "",
     "recharge": "Per turn",
     "icon": "",
-    "verbal": null,
-    "somatic": null,
-    "material": null
+    "verbal": true,
+    "somatic": true,
+    "material": false
   },
   "Mark of Putrefaction": {
     "description": "Mark of Putrefaction is a level 4 necromancy spell. It makes its target vulnerable to ⁠Necrotic damage. It cannot be learned by party members.",
@@ -3427,9 +3427,9 @@
     "duration": "",
     "recharge": "Long rest",
     "icon": "",
-    "verbal": null,
-    "somatic": null,
-    "material": null
+    "verbal": false,
+    "somatic": true,
+    "material": false
   },
   "Promise of Wealth": {
     "description": "Promise of Wealth is a level 6 divination spell. It is unique to Helsik, marking a target and granting them Infectious Greed; it gains an additional 6d6⁠⁠Slashing damage and advantage on attack rolls. It cannot be learned by party members.",
@@ -3460,9 +3460,9 @@
     "duration": "",
     "recharge": "",
     "icon": "",
-    "verbal": null,
-    "somatic": null,
-    "material": null
+    "verbal": true,
+    "somatic": true,
+    "material": false
   },
   "Sanctuary": {
     "description": "Sanctuary is a level 1 abjuration spell. It allows spellcasters to ward themselves or an ally against enemy attacks.",
@@ -3537,9 +3537,9 @@
     "duration": "",
     "recharge": "Long rest",
     "icon": "",
-    "verbal": null,
-    "somatic": null,
-    "material": null
+    "verbal": false,
+    "somatic": true,
+    "material": false
   },
   "Soul Offering": {
     "description": "Soul Offering is a level 3 spell. It allows a Gnoll Fang of Yeenoghu to disable a target creature&#039;s bonus actions or reactions. It cannot be learned by party members.",
@@ -3636,9 +3636,9 @@
     "duration": "",
     "recharge": "Long rest",
     "icon": "",
-    "verbal": null,
-    "somatic": null,
-    "material": null
+    "verbal": false,
+    "somatic": true,
+    "material": false
   },
   "Elemental Retort": {
     "description": "Elemental Retort is a level 5 evocation spell. It is unique to Lorroakan, allowing him to retaliate with elemental damage siphoned from his myrmidons when attacked. Each of Lorroakan&#039;s myrmidons adds 3d8 damage to to this spell and an additional Reaction to cast it with. It cannot be learned by party members.",
@@ -3658,9 +3658,9 @@
     "duration": "",
     "recharge": "",
     "icon": "",
-    "verbal": null,
-    "somatic": null,
-    "material": null
+    "verbal": true,
+    "somatic": true,
+    "material": false
   },
   "Hellish Rebuke": {
     "description": "Hellish Rebuke is a level 1 evocation spell. It allows spellcasters to surround a creature in hellfire that deals ⁠Fire damage as a Reaction when taking damage from them.",
@@ -3834,9 +3834,9 @@
     "duration": "",
     "recharge": "",
     "icon": "",
-    "verbal": null,
-    "somatic": null,
-    "material": null
+    "verbal": true,
+    "somatic": true,
+    "material": false
   },
   "Arabella's Shadow Entangle": {
     "description": "Arabella&#039;s Shadow Entangle is a level 1 conjuration spell. It allows a character to entangle Undead and shadow creatures.",
@@ -5033,9 +5033,9 @@
     "duration": "",
     "recharge": "",
     "icon": "",
-    "verbal": null,
-    "somatic": null,
-    "material": null
+    "verbal": true,
+    "somatic": true,
+    "material": false
   },
   "Find Familiar: Cat": {
     "description": "Find Familiar: Cat is a level 1 conjuration spell. This spell is a variation of the spell Find Familiar that summons a small cat to the caster&#039;s side.",
@@ -5165,9 +5165,9 @@
     "duration": "",
     "recharge": "",
     "icon": "",
-    "verbal": null,
-    "somatic": null,
-    "material": null
+    "verbal": true,
+    "somatic": true,
+    "material": false
   },
   "Fly (bonus action)": {
     "description": "Fly is a level 3 transmutation spell. This bonus action allows you fly through the air using your movement speed.",
@@ -5286,9 +5286,9 @@
     "duration": "",
     "recharge": "",
     "icon": "",
-    "verbal": null,
-    "somatic": null,
-    "material": null
+    "verbal": false,
+    "somatic": false,
+    "material": false
   },
   "Hex (Charisma)": {
     "description": "Hex (Charisma) is a level 1 enchantment spell. This spell allows spellcasters to put a curse on a creature and deal additional Necrotic damage to them. The curse also imposes Disadvantage on the creature&#039;s Charisma checks.",
@@ -5495,9 +5495,9 @@
     "duration": "",
     "recharge": "",
     "icon": "",
-    "verbal": null,
-    "somatic": null,
-    "material": null
+    "verbal": false,
+    "somatic": false,
+    "material": false
   },
   "Planar Ally: Cambion": {
     "description": "Planar Ally: Cambion is a level 6 conjuration spell. This spell is a variant of the Level 6 Conjuration Spell, Planar Ally. It allows spellcasters to summon a Fiend for aid.",
@@ -5561,9 +5561,9 @@
     "duration": "",
     "recharge": "",
     "icon": "",
-    "verbal": null,
-    "somatic": null,
-    "material": null
+    "verbal": false,
+    "somatic": false,
+    "material": false
   },
   "Protection from Energy: Acid": {
     "description": "Protection from Energy: Acid is a level 3 abjuration spell. This spell allows spellcasters to grant a creature they touch Resistance to Acid damage.",
@@ -5951,9 +5951,9 @@
     "duration": "",
     "recharge": "Short rest",
     "icon": "",
-    "verbal": null,
-    "somatic": null,
-    "material": null
+    "verbal": false,
+    "somatic": false,
+    "material": false
   },
   "Lightning Breath": {
     "description": "Lightning Breath is a Dragonborn racial action. This ability allows them to breathe a column of damaging lightning in a target direction.",
@@ -5995,13 +5995,343 @@
     "duration": "",
     "recharge": "Short rest",
     "icon": "",
-    "verbal": null,
-    "somatic": null,
-    "material": null
+    "verbal": false,
+    "somatic": false,
+    "material": false
   },
   "Dispel Evil And Good": {
     "description": "Dispel Evil And Good is a level 5 abjuration spell. It allows spellcasters to protect themselves from Evil and Good creatures, and allows them to break Enchantments on allies.",
     "range": "Self",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": true,
+    "somatic": true,
+    "material": false
+  },
+  "Cosmic Omen: Ability Check": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": false,
+    "somatic": false,
+    "material": false
+  },
+  "Dismiss Arcane Lock": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": false,
+    "somatic": false,
+    "material": false
+  },
+  "Arcane Critical": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": false,
+    "somatic": false,
+    "material": false
+  },
+  "Howl of the Dead": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": false,
+    "somatic": false,
+    "material": false
+  },
+  "Githyanki Psionics: Mage Hand": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": false,
+    "somatic": false,
+    "material": false
+  },
+  "Githyanki Psionics: Jump": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": false,
+    "somatic": false,
+    "material": false
+  },
+  "Hellflame Cleave": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": false,
+    "somatic": true,
+    "material": false
+  },
+  "Fanatic Retaliation": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": false,
+    "somatic": true,
+    "material": false
+  },
+  "Enlarge (Duergar)": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": true,
+    "somatic": true,
+    "material": false
+  },
+  "Invisibility (Duergar)": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": true,
+    "somatic": true,
+    "material": false
+  },
+  "Entangle (Dryad)": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": true,
+    "somatic": true,
+    "material": false
+  },
+  "Magic Missile (Illithid Arcanist)": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": true,
+    "somatic": true,
+    "material": false
+  },
+  "Rays of Fire (Mol)": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": true,
+    "somatic": true,
+    "material": false
+  },
+  "Rays of Fire (Cantrip)": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": true,
+    "somatic": true,
+    "material": false
+  },
+  "Find Familiar: Cheeky Quasit": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": true,
+    "somatic": true,
+    "material": false
+  },
+  "Umberlee's Praise": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": true,
+    "somatic": false,
+    "material": false
+  },
+  "Wail of Loss (Assistant)": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": true,
+    "somatic": false,
+    "material": false
+  },
+  "Selune's Dream": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": true,
+    "somatic": true,
+    "material": false
+  },
+  "Ensnaring Shock": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": true,
+    "somatic": true,
+    "material": false
+  },
+  "Pulling Web": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": true,
+    "somatic": true,
+    "material": false
+  },
+  "Stand Like Stone": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": true,
+    "somatic": true,
+    "material": false
+  },
+  "Incongruent Splash": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": true,
+    "somatic": true,
+    "material": false
+  },
+  "Sanctuary of Loss": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": true,
+    "somatic": true,
+    "material": false
+  },
+  "Tightening Orbit": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": true,
+    "somatic": true,
+    "material": false
+  },
+  "Gargoyle's Countenance": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": true,
+    "somatic": true,
+    "material": false
+  },
+  "Disconcerting Visage (Tactician)": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": true,
+    "somatic": true,
+    "material": false
+  },
+  "Sacrifice Soul": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": true,
+    "somatic": true,
+    "material": false
+  },
+  "Terrifying Visage (Tactician)": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": true,
+    "somatic": true,
+    "material": false
+  },
+  "Aegis of the Absolute": {
+    "description": "",
+    "range": "",
+    "area": "",
+    "duration": "",
+    "recharge": "",
+    "icon": "",
+    "verbal": true,
+    "somatic": true,
+    "material": false
+  },
+  "Bane's Wrath": {
+    "description": "",
+    "range": "",
     "area": "",
     "duration": "",
     "recharge": "",

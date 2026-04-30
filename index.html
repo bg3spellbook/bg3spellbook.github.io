@@ -3825,7 +3825,7 @@ document.addEventListener('click',function(e){
     {id:'savWrap', set:'aSv',  items:[{v:'none',l:'No Save'},'STR','DEX','CON','INT','WIS','CHA']},
     {id:'flgWrap', set:'aFlg', items:[{v:'conc',l:'Concentration'},{v:'ritual',l:'Ritual'},{v:'atk',l:'Attack Roll'},{v:'save',l:'Saving Throw'},{v:'overlap',l:'Overlap (2+)'},{v:'pinned',l:'Pinned ★'},{v:'noted',l:'Has Notes'}]},
     {id:'srcWrap', set:'aSrc', items:[{v:'feat',l:'By Feature'},{v:'item',l:'By Item'},{v:'scroll',l:'By Scroll'}]},
-    {id:'cmpWrap', set:'aCmp', items:[{v:'verbal',l:'Verbal'},{v:'somatic',l:'Somatic'},{v:'material',l:'Material'}]},
+    {id:'cmpWrap', set:'aCmp', items:[{v:'verbal',l:'Verbal'},{v:'noverbal',l:'No Verbal (Silenced)'},{v:'somatic',l:'Somatic'},{v:'material',l:'Material'}]},
     {id:'dmgWrap', set:'aDmg', items:['Acid','Bludgeoning','Cold','Fire','Force','Lightning','Necrotic','Piercing','Poison','Psychic','Radiant','Slashing','Thunder']},
     {id:'condWrap',set:'aCond',items:['Blinded','Charmed','Deafened','Frightened','Grappled','Incapacitated','Invisible','Paralyzed','Petrified','Poisoned','Prone','Restrained','Stunned','Unconscious']},
     {id:'tagWrap', set:'aTag', items:['AoE','Banishment','Buff','Concentration','Control','Damage','Debuff','Defensive','Divination','Enchantment','Environment','Exploration','Fear','Healing','Illumination','Illusion','Melee','Movement','Necromancy','Ranged','Ranger','Reaction','Self','Smite','Social','Special','Stealth','Summoning','Support','Teleportation','Transmutation','Trap','Utility']}
@@ -3869,7 +3869,7 @@ function buildMsWrapDynamic(wrapId,setName,items){
     {id:'flgM', set:aFlg, sn:'aFlg', items:[{v:'conc',l:'Concentration'},{v:'ritual',l:'Ritual'},{v:'atk',l:'Attack Roll'},{v:'save',l:'Saving Throw'},{v:'overlap',l:'Overlap (2+)'},{v:'pinned',l:'Pinned ★'},{v:'noted',l:'Has Notes'}]},
     {id:'savM', set:aSv,  sn:'aSv',  items:[{v:'none',l:'No Save'},'STR','DEX','CON','INT','WIS','CHA']},
     {id:'srcM', set:aSrc, sn:'aSrc', items:[{v:'feat',l:'By Feature'},{v:'item',l:'By Item'},{v:'scroll',l:'By Scroll'}]},
-    {id:'cmpM', set:aCmp, sn:'aCmp', items:[{v:'verbal',l:'Verbal'},{v:'somatic',l:'Somatic'},{v:'material',l:'Material'}]}
+    {id:'cmpM', set:aCmp, sn:'aCmp', items:[{v:'verbal',l:'Verbal'},{v:'noverbal',l:'No Verbal (Silenced)'},{v:'somatic',l:'Somatic'},{v:'material',l:'Material'}]}
   ];
   MM.forEach(function(m){ buildMsMobile(m.id,m.set,m.sn,m.items); });
 })();
@@ -4193,9 +4193,10 @@ function doFilter(){
     // spells with missing data (undefined) never produce false positives.
     if(aCmp.size){
       var cpMatch=false;
-      if(aCmp.has('verbal')  && sp.verbal   === true) cpMatch=true;
-      if(aCmp.has('somatic') && sp.somatic  === true) cpMatch=true;
-      if(aCmp.has('material')&& sp.material === true) cpMatch=true;
+      if(aCmp.has('verbal')   && sp.verbal   === true)  cpMatch=true;
+      if(aCmp.has('noverbal') && sp.verbal   === false) cpMatch=true;
+      if(aCmp.has('somatic')  && sp.somatic  === true)  cpMatch=true;
+      if(aCmp.has('material') && sp.material === true)  cpMatch=true;
       if(!cpMatch)return false;
     }
 

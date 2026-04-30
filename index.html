@@ -3152,6 +3152,18 @@ function spellMinLvl(spClasses, tokenBare) {
   return found;
 }
 
+// Returns true if a class token has an explicit (Lv X) qualifier in the spell's
+// class string — meaning it is a genuine wiki-sourced learnable entry.
+// Tokens with no level qualifier (e.g. bare "Sorcerer" or "Paladin") are
+// injected for filter visibility only and should not override subclass gates.
+function spellHasExplicitLevel(spClasses, tokenBare) {
+  var found = false;
+  splitClasses(spClasses).forEach(function(t) {
+    if (bareToken(t) === tokenBare && /\(Lv\s*\d+\)/.test(t)) found = true;
+  });
+  return found;
+}
+
 // Returns true if the character can access a spell via class, subclass, race, or
 // feat/item feature. Used by modals and tooltips. For the main filter use
 // charCanHaveClassRace() (class + race only, no feat/item path).
@@ -3197,23 +3209,26 @@ function charCanHave(sp, charName) {
     if (!cls) continue;
 
     if (sub && spCls.has(sub)) {
-      // Case A: spell names this character's subclass — check subclass gate first,
-      // then fall back to base class gate if the base class is also listed.
-      // Example: Compelled Duel lists "Paladin (Lv 2), Oath of the Crown (Lv 3)".
-      // An Oath of the Crown Paladin at Lv 2 qualifies via the base Paladin entry
-      // even though the Oath of the Crown gate (Lv 3) isn't met yet.
+      // Case A: spell names this character's subclass — subclass gate is authoritative.
+      // Fallback: if the base class is also listed WITH an explicit (Lv X) qualifier,
+      // it is a genuine wiki entry and the character qualifies via that path too.
+      // e.g. Compelled Duel: "Paladin (Lv 2), Oath of the Crown (Lv 3)" —
+      // an Oath of the Crown Paladin at Lv 2 qualifies via "Paladin (Lv 2)".
+      // Base class entries WITHOUT a level (e.g. bare "Paladin") are filter-only
+      // injections and do not unlock access.
       if (charLv >= spellMinLvl(sp.classes, sub)) return true;
-      if (spCls.has(cls) && charLv >= spellMinLvl(sp.classes, cls)) return true;
+      if (spCls.has(cls) && spellHasExplicitLevel(sp.classes, cls) && charLv >= spellMinLvl(sp.classes, cls)) return true;
     } else if (!sub) {
       // Case B: no subclass — base class always qualifies.
       if (spCls.has(cls) && charLv >= spellMinLvl(sp.classes, cls)) return true;
     } else {
-      // Case C: character has a subclass the spell doesn't list.
-      // Match via base class if base class is listed — the presence of another
-      // subclass in the spell doesn't block access to a genuine base-class entry.
-      // (Cross-subclass contamination for subclass-exclusive spells is prevented
-      // naturally: those spells list only the subclass, not the base class.)
-      if (spCls.has(cls) && charLv >= spellMinLvl(sp.classes, cls)) return true;
+      // Case C: character has a subclass the spell doesn't mention.
+      // Only match via base class when no other subclass of that base is in the spell.
+      if (spCls.has(cls) && charLv >= spellMinLvl(sp.classes, cls)) {
+        var otherSub = false;
+        spCls.forEach(function(t) { if (S2C[t] === cls) otherSub = true; });
+        if (!otherSub) return true;
+      }
     }
 
     // Feat/item grants are not level-gated.
@@ -3453,18 +3468,21 @@ function charCanHaveClass(sp, charName) {
     var cls = classes[i].cls || '', sub = classes[i].sub || '', lv = classes[i].lvl || 1;
     if (!cls) continue;
     if (sub && spCls.has(sub)) {
-      // Case A: spell names this character's subclass — check subclass gate first,
-      // then fall back to base class gate if the base class is also listed.
+      // Case A: spell names this character's subclass — its level gate is authoritative.
+      // Also allow base class if it has an explicit (Lv X) qualifier (genuine wiki entry).
       if (lv >= spellMinLvl(sp.classes, sub)) return true;
-      if (spCls.has(cls) && lv >= spellMinLvl(sp.classes, cls)) return true;
+      if (spCls.has(cls) && spellHasExplicitLevel(sp.classes, cls) && lv >= spellMinLvl(sp.classes, cls)) return true;
     } else if (!sub) {
       // Case B: no subclass — base class always qualifies.
       if (spCls.has(cls) && lv >= spellMinLvl(sp.classes, cls)) return true;
     } else {
-      // Case C: character has a subclass the spell doesn't list.
-      // Match via base class if listed — subclass-exclusive spells are protected
-      // naturally because they omit the base class entry entirely.
-      if (spCls.has(cls) && lv >= spellMinLvl(sp.classes, cls)) return true;
+      // Case C: character has a subclass the spell doesn't mention.
+      // Only match via base class when no other subclass of that base is in the spell.
+      if (spCls.has(cls) && lv >= spellMinLvl(sp.classes, cls)) {
+        var otherSub = false;
+        spCls.forEach(function(t) { if (S2C[t] === cls) otherSub = true; });
+        if (!otherSub) return true;
+      }
     }
   }
   return false;

@@ -3119,7 +3119,17 @@ function bareToken(t){var p=(t=t.trim()).indexOf('(');return(p<0?t:t.substring(0
 function spellMinLvl(spClasses,tokenBare){
   var found=1;
   splitClasses(spClasses).forEach(function(t){
-    if(bareToken(t)===tokenBare){var m=t.match(/\(Lv\s*(\d+)\)/);if(m)found=parseInt(m[1]);}
+    if(bareToken(t)!==tokenBare)return;
+    // Walk the token tracking paren depth; only match (Lv N) at the top level (depth 0).
+    // This avoids picking up (Lv N) patterns nested inside other parens, e.g.
+    // "Circle of the Land (Arctic (Lv 7), Forest) (Lv 3)" must return 3, not 7.
+    var depth=0;
+    for(var i=0;i<t.length;i++){
+      if(t[i]==='('){
+        if(depth===0){var m=t.substring(i).match(/^\(Lv\s*(\d+)\)/);if(m){found=parseInt(m[1]);return;}}
+        depth++;
+      }else if(t[i]===')'){if(depth>0)depth--;}
+    }
   });
   return found;
 }
@@ -3155,12 +3165,13 @@ function charCanHave(sp,charName){
     var sub=classList[i].sub||'';
     var charLvl=classList[i].lvl||1;
     if(!cls)continue;
-    if(spCls.has(cls)){
-      // Base class listed — available to all members at the class's listed level
-      if(charLvl>=spellMinLvl(sp.classes,cls))return true;
+    // If the spell names this character's subclass, the subclass level gate is
+    // authoritative — don't fall back to the base class level.
+    if(sub&&spCls.has(sub)){
+      if(charLvl>=spellMinLvl(sp.classes,sub))return true;
+    }else{
+      if(spCls.has(cls)&&charLvl>=spellMinLvl(sp.classes,cls))return true;
     }
-    // Spell tagged with char's subclass directly
-    if(sub&&spCls.has(sub)&&charLvl>=spellMinLvl(sp.classes,sub))return true;
     // Feature targets (no level gate — feat-granted spells are always available)
     if(featTargets.has(cls))return true;
     if(sub&&featTargets.has(sub))return true;
@@ -3391,9 +3402,17 @@ function _bareT(s) {
 // Subclass gating: if a spell lists subclass tokens that belong to the character's
 // base class, ONLY the character whose specific subclass is listed should match
 // via the base-class path. Example: "Life Domain (Lv 3), Cleric (Lv 5)" —
-// a plain Cleric matches at Lv 5, but a Trickery Domain Cleric at Lv 3 does NOT
-// match via the "Life Domain" token (wrong subclass). A Life Domain Cleric matches
-// at Lv 3 via the subclass path AND at Lv 5 via the base-class path.
+// Two paths per class entry:
+//   Subclass path (when spell lists the character's own subclass):
+//     The subclass level gate is authoritative — no base-class fallback for this entry.
+//     Prevents a Storm Sorcery Lv 1 character from accessing "Storm Sorcery (Lv 6)"
+//     spells through the base "Sorcerer (Lv 1)" token.
+//   Base class path (when spell does NOT list the character's subclass, or character
+//     has no subclass):
+//     All members of the base class qualify at the base-class level.
+//     Cross-subclass spills are impossible: a spell that only lists "Oath of Devotion"
+//     never carries a bare "Paladin" token, so the base path is never entered for
+//     Oathbreaker characters on those spells.
 function charCanHaveClass(sp, charName) {
   var info = CHAR_INFO[charName];
   if (!info) return false;
@@ -3404,17 +3423,13 @@ function charCanHaveClass(sp, charName) {
   for (var i = 0; i < classes.length; i++) {
     var cls = classes[i].cls || '', sub = classes[i].sub || '', lv = classes[i].lvl || 1;
     if (!cls) continue;
-    // Subclass match — e.g. spell lists "Life Domain (Lv 3)" and char IS Life Domain
-    if (sub && spCls.has(sub) && lv >= spellMinLvl(sp.classes, sub)) return true;
-    // Base class match — but only if the spell doesn't restrict to specific subclasses
-    // of this base class that the character doesn't have.
-    if (spCls.has(cls) && lv >= spellMinLvl(sp.classes, cls)) {
-      // Collect any subclass tokens in this spell that belong to the character's base class
-      var subsInSpell = [];
-      spCls.forEach(function(t) { if (S2C[t] === cls) subsInSpell.push(t); });
-      if (!subsInSpell.length) return true;               // no subclass restriction
-      if (sub && subsInSpell.indexOf(sub) > -1) return true; // char has the right subclass
-      // spell only available to specific subclasses, and char doesn't have one → no match
+    if (sub && spCls.has(sub)) {
+      // Spell specifically names this character's subclass — subclass gate is authoritative.
+      if (lv >= spellMinLvl(sp.classes, sub)) return true;
+    } else {
+      // Spell doesn't name this character's subclass (or character has no subclass).
+      // Match via the base class token and its level.
+      if (spCls.has(cls) && lv >= spellMinLvl(sp.classes, cls)) return true;
     }
   }
   return false;

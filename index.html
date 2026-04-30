@@ -3643,17 +3643,14 @@ function classChips(s){
   if(!s||!s.trim())return '<span class="nd">—</span>';
   var tokens=splitClasses(s).filter(Boolean);
   var bareSet=new Set(tokens.map(bareToken));
-  // When the parent class IS directly listed (e.g. "Paladin, Oath of Devotion (Lv 3)"),
-  // show only the parent — it already covers all subclass members, so the subclass chip
-  // is redundant. When only subclasses are listed (no parent), show the subclasses.
-  var hideSub=new Set(); // subclasses whose parent is directly present
-  bareSet.forEach(function(b){var p=S2C[b];if(p&&bareSet.has(p))hideSub.add(b);});
-  // Collect parents that are covered by subclasses when the parent is NOT itself listed.
+  // If a subclass is listed AND its parent class is NOT also independently listed,
+  // drop the parent — the subclass is more specific. But if the parent IS directly
+  // present (e.g. "Paladin, Oath of Devotion (Lv 3)"), keep it visible so users
+  // can tell the spell is available to ALL members of that class.
   var coveredParents=new Set();
   bareSet.forEach(function(b){var p=S2C[b];if(p&&!bareSet.has(p))coveredParents.add(p);});
   return tokens.filter(function(x){
-    var b=bareToken(x);
-    return !coveredParents.has(b)&&!hideSub.has(b);
+    return !coveredParents.has(bareToken(x));
   }).map(function(x){
     var bare=bareToken(x);
     var bg=cCol(bare);var parent=S2C[bare];
@@ -3667,14 +3664,12 @@ function classChips(s){
 function raceChips(s){
   if(!s||!s.trim())return '<span class="nd">—</span>';
   var tokens=splitClasses(s).filter(Boolean);
+  // If a subrace is listed AND its parent is not independently present, drop the parent.
   var bareSet=new Set(tokens.map(bareToken));
-  var hideSub2=new Set();
-  bareSet.forEach(function(b){var p=S2R[b];if(p&&bareSet.has(p))hideSub2.add(b);});
   var coveredParents=new Set();
   bareSet.forEach(function(b){var p=S2R[b];if(p&&!bareSet.has(p))coveredParents.add(p);});
   return tokens.filter(function(x){
-    var b=bareToken(x);
-    return !coveredParents.has(b)&&!hideSub2.has(b);
+    return !coveredParents.has(bareToken(x));
   }).map(function(x){
     var bare=bareToken(x);
     var bg=rCol(bare);var parent=S2R[bare];

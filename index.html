@@ -272,7 +272,7 @@ body::before {
 .filter-row {
   display: flex; gap: 7px; align-items: flex-end; flex-wrap: wrap;
 }
-/* Desktop: two grid rows — 8 controls in row 1, 7 in row 2 */
+/* Desktop: two grid rows — 8 controls in row 1, 8 in row 2 */
 @media (min-width: 1024px) {
   .filter-row.fr1 {
     display: grid;
@@ -282,7 +282,7 @@ body::before {
   }
   .filter-row.fr2 {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(8, 1fr);
     align-items: end;
     flex-wrap: unset;
     gap: 7px;
@@ -1519,7 +1519,7 @@ body.auth-locked #authBtnM { background: rgba(201,168,76,.15) !important; border
       </div>
     </div>
 
-    <!-- ── Row 2: 7 multi-select comboboxes (Source, Damage, Condition, Tag, Range, Area, Recharge) ── -->
+    <!-- ── Row 2: 8 multi-select comboboxes (Source, Components, Damage, Condition, Tag, Range, Area, Recharge) ── -->
     <div class="filter-row fr2">
       <div class="fg">
         <label>Source</label>

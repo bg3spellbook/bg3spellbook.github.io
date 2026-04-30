@@ -4691,7 +4691,7 @@ function buildModalPartySection(sp){
     if(sp[c]==='✅')return true;
     var kn=KNOWN[c]||{};
     if((kn.cantrips||[]).indexOf(sp.name)>=0||(kn.spells||[]).indexOf(sp.name)>=0)return true;
-    return charCanHave(sp,c)||charCanHaveRace(sp,c)||!!(sp.features||sp.items);
+    return charCanHave(sp,c);
   });
   if(!partyChars.length)return '';
   var h='<div class="sm-section">';

@@ -3165,12 +3165,22 @@ function charCanHave(sp,charName){
     var sub=classList[i].sub||'';
     var charLvl=classList[i].lvl||1;
     if(!cls)continue;
-    // If the spell names this character's subclass, the subclass level gate is
-    // authoritative — don't fall back to the base class level.
     if(sub&&spCls.has(sub)){
+      // Spell names this character's exact subclass — subclass level gate is authoritative.
       if(charLvl>=spellMinLvl(sp.classes,sub))return true;
-    }else{
+    }else if(!sub){
+      // Character has no subclass — base class path always applies.
       if(spCls.has(cls)&&charLvl>=spellMinLvl(sp.classes,cls))return true;
+    }else{
+      // Character has a subclass but the spell doesn't list it.
+      // Only match via base class if the spell has NO other subclass of this base class.
+      // Prevents Storm Sorcery matching "Sorcerer + Draconic Bloodline" spells, and
+      // Oathbreaker matching "Paladin + Oath of Devotion" spells.
+      if(spCls.has(cls)&&charLvl>=spellMinLvl(sp.classes,cls)){
+        var hasOtherSub=false;
+        spCls.forEach(function(t){if(S2C[t]===cls)hasOtherSub=true;});
+        if(!hasOtherSub)return true;
+      }
     }
     // Feature targets (no level gate — feat-granted spells are always available)
     if(featTargets.has(cls))return true;
@@ -3424,12 +3434,21 @@ function charCanHaveClass(sp, charName) {
     var cls = classes[i].cls || '', sub = classes[i].sub || '', lv = classes[i].lvl || 1;
     if (!cls) continue;
     if (sub && spCls.has(sub)) {
-      // Spell specifically names this character's subclass — subclass gate is authoritative.
+      // Spell names this character's exact subclass — subclass level gate is authoritative.
       if (lv >= spellMinLvl(sp.classes, sub)) return true;
-    } else {
-      // Spell doesn't name this character's subclass (or character has no subclass).
-      // Match via the base class token and its level.
+    } else if (!sub) {
+      // Character has no subclass — base class path always applies.
       if (spCls.has(cls) && lv >= spellMinLvl(sp.classes, cls)) return true;
+    } else {
+      // Character has a subclass but the spell doesn't list it.
+      // Only match via base class if the spell has NO other subclass of this base class.
+      // Prevents Storm Sorcery matching "Sorcerer + Draconic Bloodline" spells, and
+      // Oathbreaker matching "Paladin + Oath of Devotion" spells.
+      if (spCls.has(cls) && lv >= spellMinLvl(sp.classes, cls)) {
+        var hasOtherSub = false;
+        spCls.forEach(function(t) { if (S2C[t] === cls) hasOtherSub = true; });
+        if (!hasOtherSub) return true;
+      }
     }
   }
   return false;

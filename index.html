@@ -1526,6 +1526,10 @@ body.auth-locked #authBtnM { background: rgba(201,168,76,.15) !important; border
         <div class="ms-wrap" id="srcWrap" data-default="Any Source"></div>
       </div>
       <div class="fg">
+        <label>Components</label>
+        <div class="ms-wrap" id="cmpWrap" data-default="Any Components"></div>
+      </div>
+      <div class="fg">
         <label>Damage</label>
         <div class="ms-wrap" id="dmgWrap" data-default="Any Damage"></div>
       </div>
@@ -1720,6 +1724,10 @@ body.auth-locked #authBtnM { background: rgba(201,168,76,.15) !important; border
       <div class="fg">
         <label>Source</label>
         <div class="ms-mobile-wrap" id="srcM"></div>
+      </div>
+      <div class="fg">
+        <label>Components</label>
+        <div class="ms-mobile-wrap" id="cmpM"></div>
       </div>
     </div>
   </div>
@@ -2797,7 +2805,7 @@ function updateSubraceSel(raceSel) {
 var CHARS=[], CHC={}, CHAR_INFO={};
 var all=[], fC=[], fS=[];
 var activeMode={}, aSchools=new Set(), aDmg=new Set(), aCond=new Set(), aTag=new Set(), collCols=new Set(), collChars=new Set();
-var aLvl=new Set(), aUsg=new Set(), aAct=new Set(), aSv=new Set(), aFlg=new Set(), aSrc=new Set(), aCls=new Set(), aRac=new Set(), aRng=new Set(), aAoe=new Set(), aRch=new Set();
+var aLvl=new Set(), aUsg=new Set(), aAct=new Set(), aSv=new Set(), aFlg=new Set(), aSrc=new Set(), aCls=new Set(), aRac=new Set(), aRng=new Set(), aAoe=new Set(), aRch=new Set(), aCmp=new Set();
 var expKey=null, dark=true, sk='name', sd='asc', gapOpen=false, showVariants=false;
 var variantsByParent={};
 var _currentModalSpell=null;
@@ -3811,8 +3819,9 @@ document.addEventListener('click',function(e){
     {id:'usgWrap', set:'aUsg', items:[{v:'used',l:'Used (1+)'},{v:'multi',l:'Multi-used'},{v:'unused',l:'Unused'}]},
     {id:'actWrap', set:'aAct', items:[{v:'action',l:'Standard'},{v:'bonus',l:'Bonus Action'},{v:'reaction',l:'Reaction'}]},
     {id:'savWrap', set:'aSv',  items:[{v:'none',l:'No Save'},'STR','DEX','CON','INT','WIS','CHA']},
-    {id:'flgWrap', set:'aFlg', items:[{v:'conc',l:'Concentration'},{v:'ritual',l:'Ritual'},{v:'atk',l:'Attack Roll'},{v:'save',l:'Saving Throw'},{v:'overlap',l:'Overlap (2+)'},{v:'pinned',l:'Pinned ★'},{v:'noted',l:'Has Notes'},{v:'nonverbal',l:'Non-verbal (Silenced)'}]},
+    {id:'flgWrap', set:'aFlg', items:[{v:'conc',l:'Concentration'},{v:'ritual',l:'Ritual'},{v:'atk',l:'Attack Roll'},{v:'save',l:'Saving Throw'},{v:'overlap',l:'Overlap (2+)'},{v:'pinned',l:'Pinned ★'},{v:'noted',l:'Has Notes'}]},
     {id:'srcWrap', set:'aSrc', items:[{v:'feat',l:'By Feature'},{v:'item',l:'By Item'},{v:'scroll',l:'By Scroll'}]},
+    {id:'cmpWrap', set:'aCmp', items:[{v:'verbal',l:'Verbal'},{v:'somatic',l:'Somatic'},{v:'material',l:'Material'}]},
     {id:'dmgWrap', set:'aDmg', items:['Acid','Bludgeoning','Cold','Fire','Force','Lightning','Necrotic','Piercing','Poison','Psychic','Radiant','Slashing','Thunder']},
     {id:'condWrap',set:'aCond',items:['Blinded','Charmed','Deafened','Frightened','Grappled','Incapacitated','Invisible','Paralyzed','Petrified','Poisoned','Prone','Restrained','Stunned','Unconscious']},
     {id:'tagWrap', set:'aTag', items:['AoE','Banishment','Buff','Concentration','Control','Damage','Debuff','Defensive','Divination','Enchantment','Environment','Exploration','Fear','Healing','Illumination','Illusion','Melee','Movement','Necromancy','Ranged','Ranger','Reaction','Self','Smite','Social','Special','Stealth','Summoning','Support','Teleportation','Transmutation','Trap','Utility']}
@@ -3853,9 +3862,10 @@ function buildMsWrapDynamic(wrapId,setName,items){
     {id:'lvlM', set:aLvl, sn:'aLvl', items:['Cantrip','Level 1','Level 2','Level 3','Level 4','Level 5','Level 6','Level 7','Level 8','Level 9']},
     {id:'actM', set:aAct, sn:'aAct', items:[{v:'action',l:'Standard'},{v:'bonus',l:'Bonus Action'},{v:'reaction',l:'Reaction'}]},
     {id:'usgM', set:aUsg, sn:'aUsg', items:[{v:'used',l:'Used (1+)'},{v:'multi',l:'Multi-used'},{v:'unused',l:'Unused'}]},
-    {id:'flgM', set:aFlg, sn:'aFlg', items:[{v:'conc',l:'Concentration'},{v:'ritual',l:'Ritual'},{v:'atk',l:'Attack Roll'},{v:'save',l:'Saving Throw'},{v:'overlap',l:'Overlap (2+)'},{v:'pinned',l:'Pinned ★'},{v:'noted',l:'Has Notes'},{v:'nonverbal',l:'Non-verbal (Silenced)'}]},
+    {id:'flgM', set:aFlg, sn:'aFlg', items:[{v:'conc',l:'Concentration'},{v:'ritual',l:'Ritual'},{v:'atk',l:'Attack Roll'},{v:'save',l:'Saving Throw'},{v:'overlap',l:'Overlap (2+)'},{v:'pinned',l:'Pinned ★'},{v:'noted',l:'Has Notes'}]},
     {id:'savM', set:aSv,  sn:'aSv',  items:[{v:'none',l:'No Save'},'STR','DEX','CON','INT','WIS','CHA']},
-    {id:'srcM', set:aSrc, sn:'aSrc', items:[{v:'feat',l:'By Feature'},{v:'item',l:'By Item'},{v:'scroll',l:'By Scroll'}]}
+    {id:'srcM', set:aSrc, sn:'aSrc', items:[{v:'feat',l:'By Feature'},{v:'item',l:'By Item'},{v:'scroll',l:'By Scroll'}]},
+    {id:'cmpM', set:aCmp, sn:'aCmp', items:[{v:'verbal',l:'Verbal'},{v:'somatic',l:'Somatic'},{v:'material',l:'Material'}]}
   ];
   MM.forEach(function(m){ buildMsMobile(m.id,m.set,m.sn,m.items); });
 })();
@@ -4004,12 +4014,12 @@ function clearAll(){
   ['q','qm'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
   // Clear mobile checklists
   clearMsMobile('lvlM',aLvl);clearMsMobile('actM',aAct);clearMsMobile('usgM',aUsg);
-  clearMsMobile('flgM',aFlg);clearMsMobile('savM',aSv);clearMsMobile('srcM',aSrc);
+  clearMsMobile('flgM',aFlg);clearMsMobile('savM',aSv);clearMsMobile('srcM',aSrc);clearMsMobile('cmpM',aCmp);
   clearMsMobile('clsM',aCls);clearMsMobile('raceM',aRac);
   clearMsMobile('rngM',aRng);clearMsMobile('aoeM',aAoe);clearMsMobile('rchM',aRch);
   // Clear all ms-wraps
   msClear('lvlWrap',aLvl);msClear('usgWrap',aUsg);msClear('actWrap',aAct);
-  msClear('savWrap',aSv);msClear('flgWrap',aFlg);msClear('srcWrap',aSrc);
+  msClear('savWrap',aSv);msClear('flgWrap',aFlg);msClear('srcWrap',aSrc);msClear('cmpWrap',aCmp);
   msClear('dmgWrap',aDmg);msClear('condWrap',aCond);msClear('tagWrap',aTag);
   msClear('clsWrap',aCls);msClear('raceWrap',aRac);
   msClear('rngWrap',aRng);msClear('aoeWrap',aAoe);msClear('rchWrap',aRch);
@@ -4161,11 +4171,6 @@ function doFilter(){
       if(aFlg.has('overlap')){var ocnt=CHARS.filter(function(c){return sp[c]==='✅';}).length;if(ocnt>=2)flMatch=true;}
       if(aFlg.has('pinned')&&pinned.has(sp.name))flMatch=true;
       if(aFlg.has('noted')&&notes[sp.name])flMatch=true;
-      // Non-verbal: sp.verbal===false means the spell has no verbal component
-      // and is therefore castable while Silenced. sp.verbal===undefined means
-      // we haven't fetched component data yet — those spells are excluded from
-      // this filter to avoid false positives.
-      if(aFlg.has('nonverbal')&&sp.verbal===false)flMatch=true;
       if(!flMatch)return false;
     }
 
@@ -4176,6 +4181,17 @@ function doFilter(){
       if(aSrc.has('item')&&sp.items)srMatch=true;
       if(aSrc.has('scroll')&&sp.scrolls)srMatch=true;
       if(!srMatch)return false;
+    }
+
+    // Components (multi, OR logic)
+    // sp.verbal/somatic/material are booleans injected from wiki data.
+    // undefined = no data yet; those spells are excluded to avoid false positives.
+    if(aCmp.size){
+      var cpMatch=false;
+      if(aCmp.has('verbal')  && sp.verbal   === true) cpMatch=true;
+      if(aCmp.has('somatic') && sp.somatic  === true) cpMatch=true;
+      if(aCmp.has('material')&& sp.material === true) cpMatch=true;
+      if(!cpMatch)return false;
     }
 
     // Damage types (multi, OR logic — already existing)
@@ -5500,7 +5516,7 @@ function syncFilter(deskId, mobId) {
 
 function updateFilterDot() {
   var active = 0;
-  [aLvl,aUsg,aAct,aSv,aFlg,aSrc,aDmg,aCond,aTag,aCls,aRac,aRng,aAoe,aRch].forEach(function(s){if(s.size)active++;});
+  [aLvl,aUsg,aAct,aSv,aFlg,aSrc,aCmp,aDmg,aCond,aTag,aCls,aRac,aRng,aAoe,aRch].forEach(function(s){if(s.size)active++;});
   if(aSchools.size) active += aSchools.size;
   var dot = document.getElementById('filterDot');
   if(dot) dot.classList.toggle('show', active > 0);
@@ -5532,7 +5548,7 @@ function closeFilterDrawer() {
 
 function syncMobileFilters() {
   // Sync Sets → mobile native multiple-selects
-  var pairs=[['lvlM',aLvl],['usgM',aUsg],['actM',aAct],['savM',aSv],['flgM',aFlg],['srcM',aSrc],['clsM',aCls],['raceM',aRac],['rngM',aRng],['aoeM',aAoe],['rchM',aRch]];
+  var pairs=[['lvlM',aLvl],['usgM',aUsg],['actM',aAct],['savM',aSv],['flgM',aFlg],['srcM',aSrc],['cmpM',aCmp],['clsM',aCls],['raceM',aRac],['rngM',aRng],['aoeM',aAoe],['rchM',aRch]];
   pairs.forEach(function(p){
     var el=document.getElementById(p[0]);if(!el)return;
     [...el.options].forEach(function(opt){opt.selected=p[1].has(opt.value);});

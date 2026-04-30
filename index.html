@@ -3116,94 +3116,112 @@ function splitClasses(s){
 // "Cleric"                                            → "Cleric"
 function bareToken(t){var p=(t=t.trim()).indexOf('(');return(p<0?t:t.substring(0,p)).trim();}
 
-function spellMinLvl(spClasses,tokenBare){
-  var found=1;
-  splitClasses(spClasses).forEach(function(t){
-    if(bareToken(t)!==tokenBare)return;
-    // Walk the token tracking paren depth; only match (Lv N) at the top level (depth 0).
-    // This avoids picking up (Lv N) patterns nested inside other parens, e.g.
-    // "Circle of the Land (Arctic (Lv 7), Forest) (Lv 3)" must return 3, not 7.
-    var depth=0;
-    for(var i=0;i<t.length;i++){
-      if(t[i]==='('){
-        if(depth===0){var m=t.substring(i).match(/^\(Lv\s*(\d+)\)/);if(m){found=parseInt(m[1]);return;}}
+// Returns the minimum character level required to access a spell via a given bare token
+// (class or subclass name). Reads the (Lv N) qualifier at the TOP paren depth only, so
+// nested qualifiers like "Circle of the Land (Arctic (Lv 7), Forest) (Lv 3)" correctly
+// return 3 (the token's own level) rather than 7 (from the nested sub-option).
+// Returns 1 when no level qualifier is present, i.e. the token is available from level 1.
+function spellMinLvl(spClasses, tokenBare) {
+  var found = 1;
+  splitClasses(spClasses).forEach(function(t) {
+    if (bareToken(t) !== tokenBare) return;
+    var depth = 0;
+    for (var i = 0; i < t.length; i++) {
+      if (t[i] === '(') {
+        if (depth === 0) {
+          var m = t.substring(i).match(/^\(Lv\s*(\d+)\)/);
+          if (m) { found = parseInt(m[1]); return; }
+        }
         depth++;
-      }else if(t[i]===')'){if(depth>0)depth--;}
+      } else if (t[i] === ')') {
+        if (depth > 0) depth--;
+      }
     }
   });
   return found;
 }
 
-function charCanHave(sp,charName){
-  var info=CHAR_INFO[charName];
-  if(!info)return false;
-  var race=info.race||'';
+// Returns true if the character can access a spell via class, subclass, race, or
+// feat/item feature. Used by modals and tooltips. For the main filter use
+// charCanHaveClassRace() (class + race only, no feat/item path).
+//
+// Class-matching rules (applied per class entry the character has):
+//   A. Spell lists the character's own subclass → subclass level gate is authoritative.
+//      No base-class fallback for this entry. Stops Storm Sorcery Lv 1 from matching
+//      a "Storm Sorcery (Storm Spell) (Lv 6)" spell via "Sorcerer (Lv 1)".
+//   B. Character has no subclass → base class always qualifies at the base level.
+//   C. Character has a subclass the spell doesn't list → match via base class only if
+//      the spell has NO other subclass of that same base class. Stops Oathbreaker from
+//      matching "Paladin + Oath of Devotion" spells and Storm Sorcery from matching
+//      "Sorcerer + Draconic Bloodline" spells.
+//
+// Race-matching rules:
+//   — Bare race match qualifies unless the spell restricts to specific sub-races.
+//   — Sub-race characters also qualify for parent-race spells (no restriction).
+function charCanHave(sp, charName) {
+  var info = CHAR_INFO[charName];
+  if (!info) return false;
 
-  var classList=[];
-  if(info.classes&&info.classes.length) classList=info.classes;
-  else if(info.cls) classList=[{cls:info.cls,sub:info.sub||'',lvl:info.lvl||1}];
+  var classList = info.classes && info.classes.length
+    ? info.classes
+    : (info.cls ? [{ cls: info.cls, sub: info.sub||'', lvl: info.lvl||1 }] : []);
+  var race = info.race || '';
 
-  function bareTokens(s){
-    if(!s)return new Set();
-    var out=new Set();
-    splitClasses(s).forEach(function(t){var b=bareToken(t);if(b)out.add(b);});
-    return out;
-  }
+  var spCls  = _bareT(sp.classes);
+  var spRace = _bareT(sp.races);
 
-  var spCls  = bareTokens(sp.classes);
-  var spRace = bareTokens(sp.races);
-
-  var featTargets=new Set();
-  (sp.features||'').split(',').forEach(function(f){
-    f=f.trim();var col=f.indexOf(':');
-    featTargets.add(col>-1?f.substring(col+1).trim():f.replace(/\s*\([^)]+\)/g,'').trim());
+  // Build set of feature-target class/subclass names (e.g. "Magic Initiate: Wizard" → "Wizard")
+  var featTargets = new Set();
+  (sp.features || '').split(',').forEach(function(f) {
+    f = f.trim();
+    var col = f.indexOf(':');
+    featTargets.add(col > -1 ? f.substring(col + 1).trim() : f.replace(/\s*\([^)]+\)/g, '').trim());
   });
 
-  // ── CLASS: iterate all classes char has ──────────────────
-  for(var i=0;i<classList.length;i++){
-    var cls=classList[i].cls||'';
-    var sub=classList[i].sub||'';
-    var charLvl=classList[i].lvl||1;
-    if(!cls)continue;
-    if(sub&&spCls.has(sub)){
-      // Spell names this character's exact subclass — subclass level gate is authoritative.
-      if(charLvl>=spellMinLvl(sp.classes,sub))return true;
-    }else if(!sub){
-      // Character has no subclass — base class path always applies.
-      if(spCls.has(cls)&&charLvl>=spellMinLvl(sp.classes,cls))return true;
-    }else{
-      // Character has a subclass but the spell doesn't list it.
-      // Only match via base class if the spell has NO other subclass of this base class.
-      // Prevents Storm Sorcery matching "Sorcerer + Draconic Bloodline" spells, and
-      // Oathbreaker matching "Paladin + Oath of Devotion" spells.
-      if(spCls.has(cls)&&charLvl>=spellMinLvl(sp.classes,cls)){
-        var hasOtherSub=false;
-        spCls.forEach(function(t){if(S2C[t]===cls)hasOtherSub=true;});
-        if(!hasOtherSub)return true;
+  // ── Class / subclass ─────────────────────────────────────
+  for (var i = 0; i < classList.length; i++) {
+    var cls    = classList[i].cls || '';
+    var sub    = classList[i].sub || '';
+    var charLv = classList[i].lvl || 1;
+    if (!cls) continue;
+
+    if (sub && spCls.has(sub)) {
+      // Case A: spell names this character's subclass — its level gate is authoritative.
+      if (charLv >= spellMinLvl(sp.classes, sub)) return true;
+    } else if (!sub) {
+      // Case B: no subclass — base class always qualifies.
+      if (spCls.has(cls) && charLv >= spellMinLvl(sp.classes, cls)) return true;
+    } else {
+      // Case C: character has a subclass the spell doesn't mention.
+      // Only match via base class when no other subclass of that base is in the spell.
+      if (spCls.has(cls) && charLv >= spellMinLvl(sp.classes, cls)) {
+        var otherSub = false;
+        spCls.forEach(function(t) { if (S2C[t] === cls) otherSub = true; });
+        if (!otherSub) return true;
       }
     }
-    // Feature targets (no level gate — feat-granted spells are always available)
-    if(featTargets.has(cls))return true;
-    if(sub&&featTargets.has(sub))return true;
+
+    // Feat/item grants are not level-gated.
+    if (featTargets.has(cls)) return true;
+    if (sub && featTargets.has(sub)) return true;
   }
 
-  // ── RACE ─────────────────────────────────────────────────
-  if(race){
-    // Direct match (works whether race is a parent or subrace)
-    if(spRace.has(race)){
-      // If spell also lists subraces of this race, it's subrace-gated — bare parent doesn't qualify
-      var spSubsForRace=[];
-      spRace.forEach(function(t){if(S2R[t]===race)spSubsForRace.push(t);});
-      if(!spSubsForRace.length)return true; // no gating, match
-      // else: spell requires a specific subrace, fall through
+  // ── Race / subrace ───────────────────────────────────────
+  if (race && spRace.size) {
+    if (spRace.has(race)) {
+      // Direct match: qualifies unless spell restricts to specific sub-races.
+      var raceSubs = [];
+      spRace.forEach(function(t) { if (S2R[t] === race) raceSubs.push(t); });
+      if (!raceSubs.length) return true;
     }
-    // If char's race is a subrace, also check parent-race spells
-    var parentRace=S2R[race];
-    if(parentRace&&spRace.has(parentRace)){
-      var spSubsForParent=[];
-      spRace.forEach(function(t){if(S2R[t]===parentRace)spSubsForParent.push(t);});
-      if(!spSubsForParent.length)return true; // parent race only, no gating — subrace chars qualify
-      if(spSubsForParent.indexOf(race)>-1)return true; // char's specific subrace is listed
+    var parentRace = S2R[race];
+    if (parentRace && spRace.has(parentRace)) {
+      // Sub-race character: qualifies for parent-race spells unless restricted to
+      // specific sub-races, in which case the character's own sub-race must be listed.
+      var parentSubs = [];
+      spRace.forEach(function(t) { if (S2R[t] === parentRace) parentSubs.push(t); });
+      if (!parentSubs.length) return true;
+      if (parentSubs.indexOf(race) > -1) return true;
     }
   }
 
@@ -3405,49 +3423,33 @@ function _bareT(s) {
   return out;
 }
 
-// Returns true if the spell is on any of the character's class/subclass lists
-// at a level they can currently access. Does NOT check race or feat/item grants.
-// Both the base-class and subclass paths are level-gated via spellMinLvl().
-//
-// Subclass gating: if a spell lists subclass tokens that belong to the character's
-// base class, ONLY the character whose specific subclass is listed should match
-// via the base-class path. Example: "Life Domain (Lv 3), Cleric (Lv 5)" —
-// Two paths per class entry:
-//   Subclass path (when spell lists the character's own subclass):
-//     The subclass level gate is authoritative — no base-class fallback for this entry.
-//     Prevents a Storm Sorcery Lv 1 character from accessing "Storm Sorcery (Lv 6)"
-//     spells through the base "Sorcerer (Lv 1)" token.
-//   Base class path (when spell does NOT list the character's subclass, or character
-//     has no subclass):
-//     All members of the base class qualify at the base-class level.
-//     Cross-subclass spills are impossible: a spell that only lists "Oath of Devotion"
-//     never carries a bare "Paladin" token, so the base path is never entered for
-//     Oathbreaker characters on those spells.
+// Returns true if the spell is on any of the character's class or subclass lists
+// at a level they currently have access to. Does NOT check race or feat/item grants
+// (use charCanHave for those). Applies the same three-case class-matching logic as
+// charCanHave — see that function's header comment for the full rule description.
 function charCanHaveClass(sp, charName) {
   var info = CHAR_INFO[charName];
   if (!info) return false;
   var classes = info.classes && info.classes.length
     ? info.classes
-    : [{ cls: info.cls||'', sub: info.sub||'', lvl: info.lvl||1 }];
+    : (info.cls ? [{ cls: info.cls, sub: info.sub||'', lvl: info.lvl||1 }] : []);
   var spCls = _bareT(sp.classes);
   for (var i = 0; i < classes.length; i++) {
     var cls = classes[i].cls || '', sub = classes[i].sub || '', lv = classes[i].lvl || 1;
     if (!cls) continue;
     if (sub && spCls.has(sub)) {
-      // Spell names this character's exact subclass — subclass level gate is authoritative.
+      // Case A: spell names this character's subclass — its level gate is authoritative.
       if (lv >= spellMinLvl(sp.classes, sub)) return true;
     } else if (!sub) {
-      // Character has no subclass — base class path always applies.
+      // Case B: no subclass — base class always qualifies.
       if (spCls.has(cls) && lv >= spellMinLvl(sp.classes, cls)) return true;
     } else {
-      // Character has a subclass but the spell doesn't list it.
-      // Only match via base class if the spell has NO other subclass of this base class.
-      // Prevents Storm Sorcery matching "Sorcerer + Draconic Bloodline" spells, and
-      // Oathbreaker matching "Paladin + Oath of Devotion" spells.
+      // Case C: character has a subclass the spell doesn't mention.
+      // Only match via base class when no other subclass of that base is in the spell.
       if (spCls.has(cls) && lv >= spellMinLvl(sp.classes, cls)) {
-        var hasOtherSub = false;
-        spCls.forEach(function(t) { if (S2C[t] === cls) hasOtherSub = true; });
-        if (!hasOtherSub) return true;
+        var otherSub = false;
+        spCls.forEach(function(t) { if (S2C[t] === cls) otherSub = true; });
+        if (!otherSub) return true;
       }
     }
   }

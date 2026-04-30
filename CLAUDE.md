@@ -252,9 +252,9 @@ The `charCanHave` and `charCanHaveClass` functions previously had two bugs:
 2. **Subclass level bypass** — Storm Sorcery Lv 1 matching "Storm Sorcery (Storm Spell) (Lv 6)" by falling through to the "Sorcerer (Lv 1)" base class path.
 
 Both fixed with a three-case matching rule applied consistently in both functions:
-- **Case A**: Spell lists the character's own subclass → subclass level gate is authoritative.
+- **Case A**: Spell lists the character's own subclass → check subclass gate first; if it fails, also check the base class gate (e.g. Compelled Duel lists "Paladin (Lv 2), Oath of the Crown (Lv 3)" — an Oath of the Crown Paladin at Lv 2 qualifies via the base Paladin entry).
 - **Case B**: Character has no subclass → match via base class at base level.
-- **Case C**: Character has a subclass the spell doesn't list → only match via base class if the spell has NO other subclass of that same base class listed.
+- **Case C**: Character has a subclass the spell doesn't list → match via base class if the base class is listed. Subclass-exclusive spells are protected naturally because they omit the base class entry entirely.
 
 `spellMinLvl()` was also fixed to use a depth-tracking loop so nested parens like `"Circle of the Land (Arctic (Lv 7), Forest) (Lv 3)"` return the outer level (3) not the inner one (7).
 

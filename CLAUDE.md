@@ -26,7 +26,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Key JS Sections (in order, marked with `// ═══…`)
 
-1. **FLAG LOOKUP SETS** – `CONC`, `RITUAL`, `VERBAL` etc. as `Set<string>` for O(1) flag lookup.
+1. **FLAG LOOKUP SETS** – `CONC`, `RITUAL`, `REACT`, `BONUS`, `MAT_COMP` etc. as `Set<string>` for O(1) flag lookup. `MAT_COMP` is legacy; per-spell `verbal`/`somatic`/`material` booleans supersede it.
 2. **EMBEDDED SPELL DATA** – The `EMBEDDED_DATA` IIFE. Never modify this section by hand — use the Python pipeline.
 3. **PARTY BUILDER DATA** – `PARTY_CLASSES` map (class → subclasses), `PARTY_RACES` map (race → subraces), `S2C` (subclass→class), `S2R` (subrace→race).
 4. **STATE** – All mutable global state: `all` (spell array), `CHARS`, `CHAR_INFO`, `CHC` (char colours), `KNOWN`, `pinned`, `notes`, filter Sets (`aCls`, `aRac`, `aSrc`, `activeMode`, etc.), sort state, dark mode flag.
@@ -74,8 +74,10 @@ All scripts live in `tools/` and data files live in `data/`. No install step nee
 python tools/clean_spells.py           # phase 1: writes data/checked_spells.json
 python tools/clean_spells.py --apply   # phase 2: removes dead spells
 
-# 2. Fetch wiki data (descriptions, ranges, icons) into data/wiki_data.json
+# 2. Fetch wiki data (descriptions, ranges, icons, components) into data/wiki_data.json
 python tools/fetch_wiki.py
+# 2a. Fill component data for spells the wiki doesn't flag (sub-actions, psionics, etc.)
+python tools/patch_components.py
 
 # 3. Inject wiki data into the HTML spell array
 python tools/inject_wiki.py
@@ -131,8 +133,9 @@ data/
   removed_spells.json   ← archive of removed spells
 tools/
   clean_spells.py       ← two-phase wiki-page health check
-  fetch_wiki.py         ← scrapes descriptions/ranges/icons from bg3.wiki
+  fetch_wiki.py         ← scrapes descriptions/ranges/icons/components from bg3.wiki
   inject_wiki.py        ← injects wiki_data.json into HTML spell array
+  patch_components.py   ← manually assigns V/S/M components for spells the wiki doesn't flag
   compute_icons.py      ← computes MD5 spell icon CDN URLs
   sync_html.py          ← adds new spells from current_spells.json to HTML
   fetch_chip_icons.py   ← fetches scroll/item/feature icons from wiki
@@ -147,7 +150,7 @@ archive/
 | File | Purpose |
 |---|---|
 | `data/current_spells.json` | **Master spell list** (~490 spells). Source of truth for what goes in the HTML. Edit this to add/remove spells, then run the pipeline. |
-| `data/wiki_data.json` | Cached wiki data per spell: `description`, `range`, `area`, `duration`, `recharge`, `icon`. Keyed by spell name. |
+| `data/wiki_data.json` | Cached wiki data per spell: `description`, `range`, `area`, `duration`, `recharge`, `icon`, `verbal`, `somatic`, `material`. Keyed by spell name. |
 | `data/chip_names.json` | Lists all unique scroll / item / feature chip names extracted from the HTML. Rebuilt manually when chip content changes. |
 | `data/chip_icons.json` | CDN icon URL cache for scrolls/items/features. Keyed by display name. Empty string = no usable icon found. Safe to delete and re-fetch. |
 | `data/checked_spells.json` | Output of `clean_spells.py` phase 1. Maps spell name → `true`/`false` (wiki page exists). |
@@ -175,7 +178,10 @@ Each object in the embedded `spells` array:
   "area":        "6 m radius",
   "duration":    "Instantaneous",
   "recharge":    "",
-  "wiki_icon":   "https://bg3.wiki/w/images/…"
+  "wiki_icon":   "https://bg3.wiki/w/images/…",
+  "verbal":      true,
+  "somatic":     true,
+  "material":    false
 }
 ```
 
@@ -195,6 +201,7 @@ Each object in the embedded `spells` array:
 | `aSv` | `save` | OR |
 | `aFlg` | flags | OR |
 | `aSrc` | source (feat/item/scroll) | OR; `scroll` = has `scrolls` field |
+| `aCmp` | `verbal` / `somatic` / `material` booleans | OR |
 | `aDmg` | `damage` | OR |
 | `aCond` | `conditions` | OR |
 | `aTag` | `tags` | OR |

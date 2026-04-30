@@ -2101,9 +2101,9 @@ var S2R={'High Elf':'Elf','Wood Elf':'Elf','Lolth-Sworn Drow':'Drow','Seldarine 
 //   SAVES    — spells keyed by save type → used to build SAVE_MAP
 //   WIKI_*   — additional data scraped from bg3.wiki (save/dmg/atk/cost/conc)
 //   DMG_TYPES/DMG_MAP — damage type index for the Damage filter
-//   COND_MAP — conditions inflicted → used by the Conditions filter
+//   COND_MAP  — conditions inflicted → used by the Conditions filter
 //   LONG_CAST — spells with 1-minute+ casting time
-//   MAT_COMP  — spells with expensive material components
+//   MAT_COMP  — spells with expensive material components (legacy; see spell object fields)
 var CONC={'Bane':1,'Bless':1,'Blur':1,'Calm Emotions':1,'Command':1,'Confusion':1,'Darkness':1,'Detect Magic':1,'Detect Thoughts':1,'Dominate Beast':1,'Dominate Monster':1,'Dominate Person':1,'Entangle':1,'Faerie Fire':1,'Fear':1,'Flaming Sphere':1,'Fly':1,'Fog Cloud':1,'Greater Invisibility':1,'Haste':1,'Hold Monster':1,'Hold Person':1,"Hunter's Mark":1,'Hypnotic Pattern':1,'Invisibility':1,'Moonbeam':1,'Phantasmal Force':1,'Phantasmal Killer':1,'Polymorph':1,'See Invisibility':1,'Silence':1,'Sleep':1,'Slow':1,'Spider Climb':1,'Spirit Guardians':1,'Spiritual Weapon':1,'Suggestion':1,'Wall of Fire':1,'Web':1,'Witch Bolt':1,'Wrathful Smite':1,'Heroism':1,'Banishment':1,'Cloud of Daggers':1,'Crown of Madness':1,'Heat Metal':1,'Hex':1,'Ice Storm':1};
 var RITUAL={'Alarm':1,'Detect Magic':1,'Feather Fall':1,'Find Familiar':1,'Identify':1,'Longstrider':1,'Speak with Animals':1,'Augury':1,'Gentle Repose':1,'Locate Object':1,'Magic Mouth':1,'Silence':1,'Bestow Curse':1,'Clairvoyance':1,'Nondetection':1,'Remove Curse':1,'Speak with Dead':1,'Arcane Eye':1,'Divination':1,'Legend Lore':1};
 var REACT={'Shield':1,'Absorb Elements':1,'Counterspell':1,'Feather Fall':1,'Hellish Rebuke':1,'Cutting Words':1,'Divine Smite':1,'Sentinel':1};
@@ -2162,8 +2162,11 @@ var COND_MAP={
 var LONG_CAST={'Alarm':1,'Identify':1,'Find Familiar':1,'Augury':1,'Divination':1,'Legend Lore':1,'Contact Other Plane':1};
 // (1 action = default; reaction/bonus already tracked; ritual/long = LONG_CAST)
 
-// ── COMPONENTS ───────────────────────────────────────────────────────
-// All spells require verbal unless otherwise noted — simplified: M-only filter is useful
+// ── MATERIAL COMPONENTS (legacy lookup) ──────────────────────────────
+// Spells that have expensive/rare material components in D&D 5e.
+// Note: per-spell verbal/somatic/material booleans are now stored on each
+// spell object (injected by fetch_wiki.py / patch_components.py) and used
+// by the Components filter. MAT_COMP is kept for reference only.
 var MAT_COMP={'Identify':1,'Chromatic Orb':1,'Glyph of Warding':1,'Augury':1,'Bestow Curse':1,'Magic Circle':1,'Planar Binding':1,'Arcane Lock':1,'Gentle Repose':1,"Leomund's Secret Chest":1,"Mordenkainen's Private Sanctum":1,"Drawmij's Instant Summons":1,'Simulacrum':1,'True Resurrection':1,'Clone':1,'Forbiddance':1,'Symbol':1,'Holy Weapon':1,'Find Greater Steed':1,'Find Steed':1,'Continual Flame':1,'Magic Weapon':1,'Nondetection':1,'Sending':1,'Speak with Dead':1,'Spirit Guardians':1,'Water Walk':1,'Water Breathing':1,'Wind Walk':1,"Heroes' Feast":1,'Conjure Celestial':1,'Planar Ally':1,'Teleportation Circle':1,'Maze':1,'Mind Blank':1,'Sequester':1,'Trap the Soul':1,'Wish':1,'Shapechange':1,'Storm of Vengeance':1,'Weird':1};
 
 
@@ -2792,8 +2795,9 @@ function updateSubraceSel(raceSel) {
 //   all         — full spell list after loadData() (source of truth)
 //   fC / fS     — filtered cantrips / spells (rebuilt on every applyFilter call)
 //
-//   aSchools / aLvl / aCls / aRac / aUsg / aAct / aSv / aFlg / aSrc / ...
+//   aSchools / aLvl / aCls / aRac / aUsg / aAct / aSv / aFlg / aSrc / aCmp / ...
 //               — active filter Sets; empty Set means "show all"
+//               aCmp = Components filter (verbal / somatic / material)
 //
 //   sk / sd     — sort key ("name"|"school"|"level"|"used") + direction ("asc"|"desc")
 //   pinned      — Set of pinned spell names (persisted to localStorage bg3p)
@@ -4184,8 +4188,9 @@ function doFilter(){
     }
 
     // Components (multi, OR logic)
-    // sp.verbal/somatic/material are booleans injected from wiki data.
-    // undefined = no data yet; those spells are excluded to avoid false positives.
+    // sp.verbal / sp.somatic / sp.material are booleans on every spell object,
+    // injected by fetch_wiki.py + patch_components.py. Strict === true ensures
+    // spells with missing data (undefined) never produce false positives.
     if(aCmp.size){
       var cpMatch=false;
       if(aCmp.has('verbal')  && sp.verbal   === true) cpMatch=true;

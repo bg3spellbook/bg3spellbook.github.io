@@ -50,7 +50,8 @@ def fetch(url):
 # ── check if a cached entry is a previous failed fetch ───────────
 def is_empty(entry):
     """True if ALL data fields are blank, OR if the entry was fetched with
-    an older version of the script that didn't extract 'recharge'."""
+    an older version of the script that didn't extract 'recharge' or the
+    verbal/somatic/material component flags."""
     all_blank = not any([
         entry.get('description'),
         entry.get('range'),
@@ -59,8 +60,9 @@ def is_empty(entry):
         entry.get('recharge'),
         entry.get('icon'),
     ])
-    missing_recharge_key = 'recharge' not in entry
-    return all_blank or missing_recharge_key
+    missing_recharge_key  = 'recharge' not in entry
+    missing_component_key = 'verbal'   not in entry
+    return all_blank or missing_recharge_key or missing_component_key
 
 # ── parse one wiki page ──────────────────────────────────────────
 def parse_page(html, name):
@@ -71,6 +73,10 @@ def parse_page(html, name):
         'duration':    '',
         'recharge':    '',
         'icon':        '',
+        # Spell components (BG3 spell flags)
+        'verbal':      None,   # True/False/None (None = not found on page)
+        'somatic':     None,
+        'material':    None,
     }
 
     # ── Description ─────────────────────────────────────────────
@@ -113,6 +119,19 @@ def parse_page(html, name):
         am = re.search(pat, html, re.IGNORECASE)
         if am and not result[key]:
             result[key] = am.group(1).strip()
+
+    # ── Spell components (BG3 spell flags section) ───────────────
+    # bg3.wiki lists component flags as links: HasVerbalComponent, HasSomaticComponent, etc.
+    # The presence of "HasVerbalComponent" in the page means the spell HAS that component.
+    # The absence means it does NOT (for pages that have a spell-flags section at all).
+    # We only mark as True/False when we can confirm the page has a spell-flags block;
+    # otherwise we leave as None so inject_wiki.py knows the data is missing.
+    has_flags_section = bool(re.search(
+        r'HasVerbalComponent|HasSomaticComponent|HasMaterialComponent', html, re.IGNORECASE))
+    if has_flags_section:
+        result['verbal']   = bool(re.search(r'HasVerbalComponent',   html, re.IGNORECASE))
+        result['somatic']  = bool(re.search(r'HasSomaticComponent',  html, re.IGNORECASE))
+        result['material'] = bool(re.search(r'HasMaterialComponent', html, re.IGNORECASE))
 
     return result
 
@@ -160,11 +179,16 @@ def main():
             data = parse_page(html, name)
             cache[name] = data
             tags = []
-            if data['description']:  tags.append('desc')
-            if data['range']:        tags.append(f"r={data['range'][:12]}")
-            if data['area']:         tags.append(f"aoe={data['area'][:12]}")
-            if data['recharge']:     tags.append(f"rc={data['recharge'][:12]}")
-            if data['icon']:         tags.append('icon✓')
+            if data['description']:      tags.append('desc')
+            if data['range']:            tags.append(f"r={data['range'][:12]}")
+            if data['area']:             tags.append(f"aoe={data['area'][:12]}")
+            if data['recharge']:         tags.append(f"rc={data['recharge'][:12]}")
+            if data['icon']:             tags.append('icon✓')
+            if data['verbal'] is not None:
+                vms = ('V' if data['verbal'] else '-') + \
+                      ('S' if data['somatic'] else '-') + \
+                      ('M' if data['material'] else '-')
+                tags.append(f'vms={vms}')
             print('ok' + (f'  [{", ".join(tags)}]' if tags else '  [no data]'))
 
         # Save after every spell — safe to Ctrl+C and resume

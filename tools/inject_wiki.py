@@ -63,6 +63,15 @@ for sp in spells:
             sp['recharge'] = w['recharge']
         if w.get('icon'):
             sp['wiki_icon'] = w['icon']
+        # Component flags: inject as booleans only when the wiki page had data.
+        # verbal=False is meaningful (castable while Silenced), so we use explicit
+        # None-check rather than falsy-check.
+        if w.get('verbal') is not None:
+            sp['verbal']   = w['verbal']
+        if w.get('somatic') is not None:
+            sp['somatic']  = w['somatic']
+        if w.get('material') is not None:
+            sp['material'] = w['material']
         patched += 1
 
 results.append(f'[spells] Patched {patched} / {len(spells)} spells with wiki data')
